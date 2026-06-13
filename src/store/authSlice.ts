@@ -1,0 +1,230 @@
+import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
+
+export type UserRole =
+  | 'CEO'
+  | 'General Manager'
+  | 'HR Manager'
+  | 'Finance Manager'
+  | 'Marketing Manager'
+  | 'Sales Manager'
+  | 'Team Leader'
+  | 'Employee'
+  | 'Client';
+
+export type Permission =
+  | 'VIEW_LEADS'
+  | 'MANAGE_LEADS'
+  | 'VIEW_FINANCE'
+  | 'VIEW_FINANCE_SENSITIVE'
+  | 'VIEW_EMPLOYEES'
+  | 'MANAGE_EMPLOYEES'
+  | 'VIEW_KPI'
+  | 'MANAGE_KPI'
+  | 'VIEW_MARKETING'
+  | 'MANAGE_MARKETING'
+  | 'VIEW_REPORTS'
+  | 'MANAGE_SETTINGS'
+  | 'MANAGE_AUTOMATIONS'
+  | 'VIEW_TASKS'
+  | 'MANAGE_TASKS';
+
+export type UserStatus = 'Active' | 'Inactive' | 'Suspended' | 'Pending First Login';
+
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  username?: string;
+  address?: string;
+  phone?: string;
+  department?: string;
+  position?: string;
+  role: UserRole;
+  permissions: Permission[];
+  status: UserStatus;
+}
+
+interface AuthState {
+  user: User | null;
+  isAuthenticated: boolean;
+  token: string | null;
+  loading: boolean;
+  error: string | null;
+  registeredUsers: Array<User & { password?: string }>;
+}
+
+export const rolePermissions: Record<UserRole, Permission[]> = {
+  'CEO': [
+    'VIEW_LEADS', 'MANAGE_LEADS', 'VIEW_FINANCE', 'VIEW_FINANCE_SENSITIVE',
+    'VIEW_EMPLOYEES', 'MANAGE_EMPLOYEES', 'VIEW_KPI', 'MANAGE_KPI',
+    'VIEW_MARKETING', 'MANAGE_MARKETING', 'VIEW_REPORTS', 'MANAGE_SETTINGS',
+    'MANAGE_AUTOMATIONS', 'VIEW_TASKS', 'MANAGE_TASKS'
+  ],
+  'General Manager': [
+    'VIEW_LEADS', 'MANAGE_LEADS', 'VIEW_FINANCE', 'VIEW_EMPLOYEES',
+    'MANAGE_EMPLOYEES', 'VIEW_KPI', 'MANAGE_KPI', 'VIEW_MARKETING',
+    'MANAGE_MARKETING', 'VIEW_REPORTS', 'MANAGE_AUTOMATIONS', 'VIEW_TASKS', 'MANAGE_TASKS'
+  ],
+  'HR Manager': [
+    'VIEW_EMPLOYEES', 'MANAGE_EMPLOYEES', 'VIEW_KPI', 'MANAGE_KPI',
+    'VIEW_REPORTS', 'VIEW_TASKS', 'MANAGE_TASKS'
+  ],
+  'Finance Manager': [
+    'VIEW_FINANCE', 'VIEW_FINANCE_SENSITIVE', 'VIEW_REPORTS'
+  ],
+  'Marketing Manager': [
+    'VIEW_LEADS', 'MANAGE_LEADS', 'VIEW_MARKETING', 'MANAGE_MARKETING',
+    'VIEW_REPORTS', 'VIEW_TASKS', 'MANAGE_TASKS'
+  ],
+  'Sales Manager': [
+    'VIEW_LEADS', 'MANAGE_LEADS', 'VIEW_REPORTS', 'VIEW_TASKS', 'MANAGE_TASKS'
+  ],
+  'Team Leader': [
+    'VIEW_LEADS', 'VIEW_KPI', 'VIEW_TASKS', 'MANAGE_TASKS'
+  ],
+  'Employee': [
+    'VIEW_TASKS', 'VIEW_KPI'
+  ],
+  'Client': []
+};
+
+const defaultUsers: Array<User & { password?: string }> = [
+  { id: 'u1', name: 'أحمد علي (CEO)', email: 'ceo@company.com', role: 'CEO', permissions: rolePermissions['CEO'], password: 'Password@123', status: 'Active' },
+  { id: 'u2', name: 'ياسر جلال (GM)', email: 'gm@company.com', role: 'General Manager', permissions: rolePermissions['General Manager'], password: 'Password@123', status: 'Active' },
+  { id: 'u3', name: 'سارة خالد (HR)', email: 'hr@company.com', role: 'HR Manager', permissions: rolePermissions['HR Manager'], password: 'Password@123', status: 'Active' },
+  { id: 'u4', name: 'ماجد سليمان (Finance)', email: 'finance@company.com', role: 'Finance Manager', permissions: rolePermissions['Finance Manager'], password: 'Password@123', status: 'Active' },
+  { id: 'u5', name: 'دينا الشافعي (Marketing)', email: 'marketing@company.com', role: 'Marketing Manager', permissions: rolePermissions['Marketing Manager'], password: 'Password@123', status: 'Active' },
+  { id: 'u6', name: 'محمود عبد السلام (Sales)', email: 'sales.manager@company.com', role: 'Sales Manager', permissions: rolePermissions['Sales Manager'], password: 'Password@123', status: 'Active' },
+  { id: 'u7', name: 'كريم نادر (Team Leader)', email: 'teamleader@company.com', role: 'Team Leader', permissions: rolePermissions['Team Leader'], password: 'Password@123', status: 'Active' },
+  { id: 'u8', name: 'محمد حسن (Employee)', email: 'employee@company.com', role: 'Employee', permissions: rolePermissions['Employee'], password: 'Password@123', status: 'Active' },
+  { id: 'u9', name: 'شركة النور (Client)', email: 'client@company.com', role: 'Client', permissions: rolePermissions['Client'], password: 'Password@123', status: 'Active' }
+];
+
+const getStoredAuth = () => {
+  const token = localStorage.getItem('auth_token');
+  const userJson = localStorage.getItem('auth_user');
+  if (token && userJson) {
+    try {
+      const parsed = JSON.parse(userJson) as User;
+      return {
+        user: parsed,
+        token,
+        isAuthenticated: true
+      };
+    } catch {
+      // Ignore
+    }
+  }
+  // Default: CEO logged in for demo convenience
+  return {
+    user: defaultUsers[0],
+    token: 'mock-jwt-token-ceo',
+    isAuthenticated: true
+  };
+};
+
+const storedAuth = getStoredAuth();
+
+const initialState: AuthState = {
+  user: storedAuth.user,
+  isAuthenticated: storedAuth.isAuthenticated,
+  token: storedAuth.token,
+  loading: false,
+  error: null,
+  registeredUsers: defaultUsers
+};
+
+const authSlice = createSlice({
+  name: 'auth',
+  initialState,
+  reducers: {
+    loginStart(state) {
+      state.loading = true;
+      state.error = null;
+    },
+    loginSuccess(state, action: PayloadAction<{ user: User; token: string }>) {
+      state.loading = false;
+      state.user = action.payload.user;
+      state.token = action.payload.token;
+      state.isAuthenticated = true;
+      localStorage.setItem('auth_token', action.payload.token);
+      localStorage.setItem('auth_user', JSON.stringify(action.payload.user));
+    },
+    loginFailure(state, action: PayloadAction<string>) {
+      state.loading = false;
+      state.error = action.payload;
+    },
+    logout(state) {
+      state.user = null;
+      state.token = null;
+      state.isAuthenticated = false;
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('auth_user');
+    },
+    registerSuccess(state, action: PayloadAction<User & { password?: string }>) {
+      state.registeredUsers.push(action.payload);
+    },
+    createUser(state, action: PayloadAction<User & { password?: string }>) {
+      state.registeredUsers.push(action.payload);
+    },
+    changePasswordAndActivate(state, action: PayloadAction<{ email: string; newPassword: string }>) {
+      const uIdx = state.registeredUsers.findIndex(u => u.email.toLowerCase() === action.payload.email.toLowerCase());
+      if (uIdx !== -1) {
+        state.registeredUsers[uIdx].password = action.payload.newPassword;
+        state.registeredUsers[uIdx].status = 'Active';
+      }
+      if (state.user && state.user.email.toLowerCase() === action.payload.email.toLowerCase()) {
+        state.user.status = 'Active';
+        localStorage.setItem('auth_user', JSON.stringify(state.user));
+      }
+    },
+    updateUserStatus(state, action: PayloadAction<{ id: string; status: UserStatus }>) {
+      const uIdx = state.registeredUsers.findIndex(u => u.id === action.payload.id);
+      if (uIdx !== -1) {
+        state.registeredUsers[uIdx].status = action.payload.status;
+      }
+      if (state.user && state.user.id === action.payload.id) {
+        state.user.status = action.payload.status;
+        localStorage.setItem('auth_user', JSON.stringify(state.user));
+      }
+    },
+    updateUserRoleAndPermissions(state, action: PayloadAction<{ id: string; role: UserRole; permissions: Permission[] }>) {
+      const uIdx = state.registeredUsers.findIndex(u => u.id === action.payload.id);
+      if (uIdx !== -1) {
+        state.registeredUsers[uIdx].role = action.payload.role;
+        state.registeredUsers[uIdx].permissions = action.payload.permissions;
+      }
+      if (state.user && state.user.id === action.payload.id) {
+        state.user.role = action.payload.role;
+        state.user.permissions = action.payload.permissions;
+        localStorage.setItem('auth_user', JSON.stringify(state.user));
+      }
+    },
+    resetUserPassword(state, action: PayloadAction<{ id: string; tempPassword: string }>) {
+      const uIdx = state.registeredUsers.findIndex(u => u.id === action.payload.id);
+      if (uIdx !== -1) {
+        state.registeredUsers[uIdx].password = action.payload.tempPassword;
+        state.registeredUsers[uIdx].status = 'Pending First Login';
+      }
+      if (state.user && state.user.id === action.payload.id) {
+        state.user.status = 'Pending First Login';
+        localStorage.setItem('auth_user', JSON.stringify(state.user));
+      }
+    }
+  }
+});
+
+export const {
+  loginStart,
+  loginSuccess,
+  loginFailure,
+  logout,
+  registerSuccess,
+  createUser,
+  changePasswordAndActivate,
+  updateUserStatus,
+  updateUserRoleAndPermissions,
+  resetUserPassword
+} = authSlice.actions;
+
+export default authSlice.reducer;

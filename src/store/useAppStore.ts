@@ -1,0 +1,561 @@
+import { create } from 'zustand';
+
+// Types Definitions
+export type UserRole = 'CEO' | 'Head' | 'Team Leader' | 'Employee';
+
+export interface Lead {
+  id: string;
+  name: string;
+  phone: string;
+  email: string;
+  company: string;
+  jobTitle: string;
+  source: string;
+  governorate: string;
+  status: 'New' | 'Contacted' | 'Follow Up' | 'Meeting' | 'Proposal Sent' | 'Negotiation' | 'Won' | 'Lost';
+  notes: string;
+  dateCreated: string;
+  assignedTo?: string; // Sales Agent Name or ID
+}
+
+export interface Task {
+  id: string;
+  name: string;
+  description: string;
+  priority: 'High' | 'Medium' | 'Low';
+  dueDate: string;
+  assignee: string; // Employee Name
+  status: 'To Do' | 'In Progress' | 'Review' | 'Completed' | 'Cancelled';
+}
+
+export interface AttendanceRecord {
+  date: string;
+  checkIn: string;
+  checkOut: string;
+  workingHours: number;
+  delayMinutes: number;
+}
+
+export interface LeaveRequest {
+  id: string;
+  type: string;
+  fromDate: string;
+  toDate: string;
+  status: 'Pending' | 'Approved' | 'Rejected';
+}
+
+export interface Employee {
+  id: string;
+  name: string;
+  department: string;
+  jobTitle: string;
+  directManager: string;
+  hireDate: string;
+  salary: number;
+  email: string;
+  phone?: string;
+  address?: string;
+  username?: string;
+  role?: string;
+  status?: string;
+  attendance: AttendanceRecord[];
+  leaves: LeaveRequest[];
+}
+
+export interface KPIItem {
+  id: string;
+  name: string;
+  description: string;
+  weight: number; // percentage, e.g. 25
+  target: number;
+  actual: number;
+  type: 'Number' | 'Percentage' | 'Currency' | 'Rating' | 'Boolean';
+  source: 'Manual' | 'CRM' | 'Tasks' | 'Finance' | 'Attendance';
+  selfScore?: number;
+  managerScore?: number;
+  finalScore?: number;
+}
+
+export interface KPITemplate {
+  id: string;
+  name: string;
+  department: string;
+  jobTitle: string;
+  period: string; // e.g., "Q2 2026"
+  items: KPIItem[];
+}
+
+export interface FinancialRecord {
+  id: string;
+  type: 'Revenue' | 'Expense';
+  category: 'Contract' | 'Payment' | 'Subscription' | 'Salary' | 'Ads' | 'Tools' | 'Operations' | 'Bills';
+  title: string;
+  amount: number;
+  date: string;
+}
+
+export interface Campaign {
+  id: string;
+  name: string;
+  budget: number;
+  platform: 'Facebook' | 'Google Ads' | 'TikTok' | 'Snapchat';
+  goal: string;
+  status: 'Active' | 'Paused' | 'Completed';
+  assignee: string;
+  reach: number;
+  clicks: number;
+  leads: number;
+  revenueGenerated: number;
+}
+
+export interface SystemFile {
+  id: string;
+  name: string;
+  category: 'Contracts' | 'Proposals' | 'Client Files' | 'Employee Files';
+  size: string;
+  uploadDate: string;
+  type: string;
+}
+
+export interface Notification {
+  id: string;
+  title: string;
+  message: string;
+  type: 'info' | 'warning' | 'success' | 'danger';
+  date: string;
+  read: boolean;
+}
+
+export interface ChatMessage {
+  id: string;
+  sender: 'user' | 'client';
+  text: string;
+  time: string;
+}
+
+export interface ChatSession {
+  id: string;
+  clientName: string;
+  clientPhone: string;
+  lastMessage: string;
+  time: string;
+  unread: boolean;
+  messages: ChatMessage[];
+}
+
+interface AppState {
+  currentRole: UserRole;
+  leads: Lead[];
+  tasks: Task[];
+  employees: Employee[];
+  kpiTemplates: KPITemplate[];
+  financeRecords: FinancialRecord[];
+  campaigns: Campaign[];
+  files: SystemFile[];
+  notifications: Notification[];
+  chats: ChatSession[];
+  
+  // Actions
+  setRole: (role: UserRole) => void;
+  addLead: (lead: Omit<Lead, 'id' | 'dateCreated'>) => void;
+  updateLead: (lead: Lead) => void;
+  deleteLead: (id: string) => void;
+  importLeads: (leads: Omit<Lead, 'id' | 'dateCreated'>[]) => void;
+  addTask: (task: Omit<Task, 'id'>) => void;
+  updateTask: (task: Task) => void;
+  deleteTask: (id: string) => void;
+  addEmployee: (employee: Omit<Employee, 'id' | 'attendance' | 'leaves'>) => void;
+  updateEmployee: (employee: Employee) => void;
+  addAttendance: (empId: string, record: AttendanceRecord) => void;
+  addLeaveRequest: (empId: string, request: Omit<LeaveRequest, 'id'>) => void;
+  updateLeaveStatus: (empId: string, requestId: string, status: 'Approved' | 'Rejected') => void;
+  addKpiTemplate: (template: KPITemplate) => void;
+  updateKpiItemScore: (templateId: string, itemId: string, scores: Partial<Pick<KPIItem, 'selfScore' | 'managerScore' | 'finalScore'>>) => void;
+  addFinancialRecord: (record: Omit<FinancialRecord, 'id'>) => void;
+  addCampaign: (campaign: Omit<Campaign, 'id' | 'reach' | 'clicks' | 'leads' | 'revenueGenerated'>) => void;
+  updateCampaign: (campaign: Campaign) => void;
+  addFile: (file: Omit<SystemFile, 'id' | 'uploadDate'>) => void;
+  deleteFile: (id: string) => void;
+  markNotificationRead: (id: string) => void;
+  markAllNotificationsRead: () => void;
+  sendChatMessage: (chatId: string, text: string) => void;
+  assignLead: (leadId: string, agentName: string) => void;
+  autoAssignLeads: (rule: 'workload' | 'performance' | 'location') => void;
+}
+
+// Initial Mock Data
+const mockLeads: Lead[] = [
+  { id: '1', name: 'أحمد علي محمد', phone: '+20 1012345678', email: 'ahmed.ali@gmail.com', company: 'النور للاستيراد والتصدير', jobTitle: 'مدير المشتريات', source: 'Facebook Ads', governorate: 'القاهرة', status: 'New', notes: 'مهتم بالخدمات اللوجستية ويطلب عرض سعر.', dateCreated: '2026-06-10', assignedTo: '' },
+  { id: '2', name: 'سارة خالد محمود', phone: '+20 1198765432', email: 'sara.khalid@gmail.com', company: 'تكنو سوفت', jobTitle: 'رئيس قسم الموارد البشرية', source: 'Google Ads', governorate: 'الجيزة', status: 'Contacted', notes: 'تم التواصل معها وطلب تفاصيل حول نظام إدارة الموظفين.', dateCreated: '2026-06-11', assignedTo: 'محمد حسن (Employee)' },
+  { id: '3', name: 'محمد عبد الرحمن', phone: '+20 1234567890', email: 'm.abdulrahman@yahoo.com', company: 'ريد للمقاولات', jobTitle: 'المدير العام', source: 'Website Forms', governorate: 'الإسكندرية', status: 'Proposal Sent', notes: 'تم إرسال العرض المالي والفني وفي انتظار الرد.', dateCreated: '2026-06-08', assignedTo: '' },
+  { id: '4', name: 'ليلى يوسف خليل', phone: '+20 1599988877', email: 'laila.youssef@outlook.com', company: 'ستار فودز', jobTitle: 'مديرة التسويق', source: 'WhatsApp Messages', governorate: 'القليوبية', status: 'Negotiation', notes: 'تفاوض على السعر النهائي وعدد الحسابات المطلوبة للموظفين.', dateCreated: '2026-06-05', assignedTo: 'محمد حسن (Employee)' },
+  { id: '5', name: 'محمود الصاوي', phone: '+20 1022233344', email: 'm.sawi@sawi-group.com', company: 'مجموعة الصاوي العقارية', jobTitle: 'الرئيس التنفيذي', source: 'Landing Pages', governorate: 'الغربية', status: 'Won', notes: 'تم توقيع العقد وبدء مرحلة الإعداد والتنفيذ.', dateCreated: '2026-06-01', assignedTo: '' }
+];
+
+const mockTasks: Task[] = [
+  { id: '1', name: 'تجهيز عرض السعر لشركة النور', description: 'إعداد ملف PDF متكامل بالأسعار والخدمات المطلوبة وإرساله للإيميل الخاص بهم.', priority: 'High', dueDate: '2026-06-15', assignee: 'أحمد علي محمد', status: 'In Progress' },
+  { id: '2', name: 'مراجعة الميزانية التسويقية لشهر مايو', description: 'تحليل أداء الحملات ومطابقتها مع الإيرادات المحققة وحساب العائد على الاستثمار.', priority: 'Medium', dueDate: '2026-06-18', assignee: 'ياسر جلال', status: 'To Do' },
+  { id: '3', name: 'تحديث عقود الموظفين الجدد', description: 'إضافة بنود العمل عن بعد وتحديث المرتبات والبدلات وتجهيزها للتوقيع.', priority: 'Low', dueDate: '2026-06-20', assignee: 'سارة خالد محمود', status: 'Review' },
+  { id: '4', name: 'حل مشكلة تسجيل الحضور اليومي للموظفين', description: 'إصلاح الخلل في نظام الـ Check In التلقائي عبر تطبيق الجوال الخاص بالنظام.', priority: 'High', dueDate: '2026-06-12', assignee: 'كريم ممدوح', status: 'Completed' },
+  { id: '5', name: 'إعداد تقرير أداء الـ KPIs للربع الأول', description: 'جمع تقييمات الموظفين وإصدار الدرجات النهائية والتقرير العام لمجلس الإدارة.', priority: 'High', dueDate: '2026-06-10', assignee: 'أحمد علي محمد', status: 'Cancelled' }
+];
+
+const mockEmployees: Employee[] = [
+  {
+    id: 'emp1',
+    name: 'محمود عبد السلام',
+    department: 'المبيعات',
+    jobTitle: 'مدير حسابات العملاء',
+    directManager: 'ياسر جلال',
+    hireDate: '2025-01-15',
+    salary: 12000,
+    email: 'm.abdelsalam@crm.com',
+    attendance: [
+      { date: '2026-06-11', checkIn: '09:00', checkOut: '17:00', workingHours: 8, delayMinutes: 0 },
+      { date: '2026-06-12', checkIn: '09:15', checkOut: '17:30', workingHours: 8.25, delayMinutes: 15 },
+      { date: '2026-06-13', checkIn: '08:55', checkOut: '17:00', workingHours: 8.08, delayMinutes: 0 },
+    ],
+    leaves: [
+      { id: 'lv1', type: 'إجازة عارضة', fromDate: '2026-06-25', toDate: '2026-06-26', status: 'Pending' }
+    ]
+  },
+  {
+    id: 'emp2',
+    name: 'دينا الشافعي',
+    department: 'التسويق',
+    jobTitle: 'أخصائي حملات إعلانية',
+    directManager: 'ياسر جلال',
+    hireDate: '2025-03-01',
+    salary: 10000,
+    email: 'dina.shafik@crm.com',
+    attendance: [
+      { date: '2026-06-11', checkIn: '09:05', checkOut: '17:00', workingHours: 7.9, delayMinutes: 5 },
+      { date: '2026-06-12', checkIn: '09:00', checkOut: '17:00', workingHours: 8, delayMinutes: 0 },
+      { date: '2026-06-13', checkIn: '09:30', checkOut: '17:00', workingHours: 7.5, delayMinutes: 30 },
+    ],
+    leaves: [
+      { id: 'lv2', type: 'إجازة سنوية', fromDate: '2026-05-10', toDate: '2026-05-15', status: 'Approved' }
+    ]
+  },
+  {
+    id: 'emp3',
+    name: 'شريف النجار',
+    department: 'الموارد البشرية',
+    jobTitle: 'مسؤول شؤون الموظفين',
+    directManager: 'أحمد علي محمد (المدير العام)',
+    hireDate: '2024-06-01',
+    salary: 9500,
+    email: 'sherif.naggar@crm.com',
+    attendance: [
+      { date: '2026-06-11', checkIn: '08:45', checkOut: '17:00', workingHours: 8.25, delayMinutes: 0 },
+      { date: '2026-06-12', checkIn: '08:50', checkOut: '17:00', workingHours: 8.16, delayMinutes: 0 },
+      { date: '2026-06-13', checkIn: '08:58', checkOut: '17:00', workingHours: 8.03, delayMinutes: 0 },
+    ],
+    leaves: []
+  }
+];
+
+const mockKpiTemplates: KPITemplate[] = [
+  {
+    id: 'tpl1',
+    name: 'تقييم الربع الثاني لقسم المبيعات',
+    department: 'المبيعات',
+    jobTitle: 'مدير حسابات العملاء',
+    period: 'Q2 2026',
+    items: [
+      { id: 'kpi_it1', name: 'تحقيق المبيعات المستهدفة', description: 'الوصول إلى الحجم المالي المستهدف للمبيعات الجديدة.', weight: 40, target: 150000, actual: 125000, type: 'Currency', source: 'CRM', selfScore: 8, managerScore: 7, finalScore: 7.5 },
+      { id: 'kpi_it2', name: 'تطوير قاعدة العملاء', description: 'تحويل عملاء محتملين جدد إلى مشترين فعليين.', weight: 30, target: 20, actual: 18, type: 'Number', source: 'CRM', selfScore: 9, managerScore: 8, finalScore: 8.5 },
+      { id: 'kpi_it3', name: 'التسليم وإنهاء المهام', description: 'إتمام المهام البيانية والمتابعات في الموعد المحدد.', weight: 20, target: 95, actual: 92, type: 'Percentage', source: 'Tasks', selfScore: 9, managerScore: 9, finalScore: 9 },
+      { id: 'kpi_it4', name: 'ساعات الانضباط والحضور', description: 'الالتزام بمواعيد الدوام الرسمية وعدم تسجيل ساعات تأخير.', weight: 10, target: 98, actual: 95, type: 'Percentage', source: 'Attendance', selfScore: 10, managerScore: 9, finalScore: 9.5 }
+    ]
+  }
+];
+
+const mockFinanceRecords: FinancialRecord[] = [
+  { id: 'fin1', type: 'Revenue', category: 'Contract', title: 'عقد توريد برمجيات شركة النور', amount: 45000, date: '2026-06-01' },
+  { id: 'fin2', type: 'Revenue', category: 'Subscription', title: 'اشتراك شهري نظام CRM سحابي - ريد للمقاولات', amount: 3500, date: '2026-06-05' },
+  { id: 'fin3', type: 'Revenue', category: 'Payment', title: 'دفعة ثانية استشارات تسويقية - شركة ستار فودز', amount: 12000, date: '2026-06-10' },
+  { id: 'fin4', type: 'Expense', category: 'Salary', title: 'مرتبات الموظفين لشهر مايو', amount: 31500, date: '2026-05-30' },
+  { id: 'fin5', type: 'Expense', category: 'Ads', title: 'تمويل إعلانات فيسبوك وجوجل - مبيعات الربع الثاني', amount: 8000, date: '2026-06-03' },
+  { id: 'fin6', type: 'Expense', category: 'Tools', title: 'اشتراكات برامج Zoom / Slack / Figma', amount: 1500, date: '2026-06-07' },
+  { id: 'fin7', type: 'Expense', category: 'Operations', title: 'إيجار المقر الإداري الشهري للشركة', amount: 10000, date: '2026-06-01' },
+  { id: 'fin8', type: 'Expense', category: 'Bills', title: 'فاتورة الكهرباء والإنترنت للمقر', amount: 2200, date: '2026-06-08' }
+];
+
+const mockCampaigns: Campaign[] = [
+  { id: 'c1', name: 'حملة ترويج نظام الـ CRM للمؤسسات', budget: 5000, platform: 'Facebook', goal: 'Leads Generation', status: 'Active', assignee: 'دينا الشافعي', reach: 65000, clicks: 3200, leads: 145, revenueGenerated: 35000 },
+  { id: 'c2', name: 'حملة البحث وجوجل إعلانات Lead Gen', budget: 4000, platform: 'Google Ads', goal: 'Sales Conversion', status: 'Active', assignee: 'دينا الشافعي', reach: 45000, clicks: 5100, leads: 180, revenueGenerated: 54000 },
+  { id: 'c3', name: 'حملة توعية وإطلاق هوية سندك', budget: 3000, platform: 'TikTok', goal: 'Reach & Views', status: 'Completed', assignee: 'شريف النجار', reach: 180000, clicks: 12500, leads: 40, revenueGenerated: 12000 },
+  { id: 'c4', name: 'توسعات السوق الخليجي عقارات', budget: 6000, platform: 'Snapchat', goal: 'App Installs', status: 'Paused', assignee: 'دينا الشافعي', reach: 90000, clicks: 4300, leads: 75, revenueGenerated: 18000 }
+];
+
+const mockFiles: SystemFile[] = [
+  { id: 'f1', name: 'عقد توريد برمجيات النور.pdf', category: 'Contracts', size: '2.4 MB', uploadDate: '2026-06-01', type: 'pdf' },
+  { id: 'f2', name: 'العرض الفني والمالي - ريد للمقاولات.docx', category: 'Proposals', size: '1.8 MB', uploadDate: '2026-06-08', type: 'docx' },
+  { id: 'f3', name: 'صور الهوية التجارية - لوجو سندك.zip', category: 'Client Files', size: '15.5 MB', uploadDate: '2026-06-11', type: 'zip' },
+  { id: 'f4', name: 'مسوغات تعيين الموظف محمود عبد السلام.pdf', category: 'Employee Files', size: '4.2 MB', uploadDate: '2026-01-15', type: 'pdf' }
+];
+
+const mockNotifications: Notification[] = [
+  { id: 'n1', title: 'عميل محتمل جديد', message: 'سجل العميل "أحمد علي محمد" اهتمامه عبر إعلانات فيسبوك.', type: 'info', date: '2026-06-13T17:45:00', read: false },
+  { id: 'n2', title: 'مهمة متأخرة!', message: 'المهمة "تجهيز عرض السعر لشركة النور" تجاوزت موعد التسليم المحدد.', type: 'danger', date: '2026-06-13T16:00:00', read: false },
+  { id: 'n3', title: 'طلب إجازة جديد', message: 'قدم الموظف "محمود عبد السلام" طلب إجازة عارضة ليومين.', type: 'warning', date: '2026-06-12T11:30:00', read: true },
+  { id: 'n4', title: 'متابعة مستحقة للعميل', message: 'يحين موعد الاتصال بالعميل "ليلى يوسف خليل" لمناقشة العقد.', type: 'info', date: '2026-06-13T10:15:00', read: false },
+  { id: 'n5', title: 'تسجيل مصروف جديد', message: 'سجل المحاسب "سارة خالد" مصروفاً بقيمة 2200 ج.م فاتورة كهرباء.', type: 'success', date: '2026-06-13T09:00:00', read: true }
+];
+
+const mockChats: ChatSession[] = [
+  {
+    id: 'ch1',
+    clientName: 'أحمد علي محمد',
+    clientPhone: '+20 1012345678',
+    lastMessage: 'تمام، في انتظار عرض السعر اليوم إن شاء الله.',
+    time: '05:30 PM',
+    unread: true,
+    messages: [
+      { id: 'm1', sender: 'client', text: 'السلام عليكم ورحمة الله، كنت بسأل عن خدمات الـ CRM', time: '11:00 AM' },
+      { id: 'm2', sender: 'user', text: 'وعليكم السلام ورحمة الله وبركاته يا فندم. يسعدنا جداً تواصلك معنا. نظام سندك برو بيقدملك لوحة تحكم كاملة لإدارة المبيعات والتسويق والموظفين والـ KPIs.', time: '11:15 AM' },
+      { id: 'm3', sender: 'client', text: 'رائع جداً، هل يدعم اللغة العربية بشكل كامل؟', time: '11:20 AM' },
+      { id: 'm4', sender: 'user', text: 'نعم، يدعم الاتجاهين العربي والإنجليزي بالكامل، مع تقارير مالية وتتبع حضور الموظفين بالـ GPS.', time: '11:25 AM' },
+      { id: 'm5', sender: 'client', text: 'تمام، في انتظار عرض السعر اليوم إن شاء الله.', time: '05:30 PM' }
+    ]
+  },
+  {
+    id: 'ch2',
+    clientName: 'محمد عبد الرحمن',
+    clientPhone: '+20 1234567890',
+    lastMessage: 'تم إرسال التحويل البنكي وتأكيده.',
+    time: 'أمس',
+    unread: false,
+    messages: [
+      { id: 'm6', sender: 'user', text: 'مرحبا أستاذ محمد، هل قمت بمراجعة مسودة العقد؟', time: '02:00 PM' },
+      { id: 'm7', sender: 'client', text: 'نعم تم المراجعة والتوقيع من جهتنا.', time: '02:30 PM' },
+      { id: 'm8', sender: 'client', text: 'تم إرسال التحويل البنكي وتأكيده.', time: '03:00 PM' }
+    ]
+  }
+];
+
+export const useAppStore = create<AppState>((set) => ({
+  currentRole: 'CEO',
+  leads: mockLeads,
+  tasks: mockTasks,
+  employees: mockEmployees,
+  kpiTemplates: mockKpiTemplates,
+  financeRecords: mockFinanceRecords,
+  campaigns: mockCampaigns,
+  files: mockFiles,
+  notifications: mockNotifications,
+  chats: mockChats,
+  
+  setRole: (role) => set({ currentRole: role }),
+  
+  addLead: (lead) => set((state) => ({
+    leads: [
+      {
+        ...lead,
+        id: (state.leads.length + 1).toString(),
+        dateCreated: new Date().toISOString().split('T')[0]
+      },
+      ...state.leads
+    ]
+  })),
+  
+  updateLead: (updatedLead) => set((state) => ({
+    leads: state.leads.map((l) => l.id === updatedLead.id ? updatedLead : l)
+  })),
+  
+  deleteLead: (id) => set((state) => ({
+    leads: state.leads.filter((l) => l.id !== id)
+  })),
+  
+  importLeads: (newLeads) => set((state) => {
+    const startId = state.leads.length + 1;
+    const formattedLeads = newLeads.map((l, index) => ({
+      ...l,
+      id: (startId + index).toString(),
+      dateCreated: new Date().toISOString().split('T')[0],
+      assignedTo: '' // Incoming leads start unassigned
+    }));
+    return { leads: [...formattedLeads, ...state.leads] };
+  }),
+
+  assignLead: (leadId, agentName) => set((state) => ({
+    leads: state.leads.map((l) => l.id === leadId ? { ...l, assignedTo: agentName } : l)
+  })),
+
+  autoAssignLeads: (rule) => set((state) => {
+    // Perform simulated logic depending on rule selection
+    const assignedAgent = rule === 'location' ? 'محمد حسن (Employee)' : 'محمد حسن (Employee)';
+    return {
+      leads: state.leads.map((l) => {
+        if (!l.assignedTo) {
+          return { ...l, assignedTo: assignedAgent };
+        }
+        return l;
+      })
+    };
+  }),
+  
+  addTask: (task) => set((state) => ({
+    tasks: [
+      { ...task, id: (state.tasks.length + 1).toString() },
+      ...state.tasks
+    ]
+  })),
+  
+  updateTask: (updatedTask) => set((state) => ({
+    tasks: state.tasks.map((t) => t.id === updatedTask.id ? updatedTask : t)
+  })),
+  
+  deleteTask: (id) => set((state) => ({
+    tasks: state.tasks.filter((t) => t.id !== id)
+  })),
+  
+  addEmployee: (employee) => set((state) => ({
+    employees: [
+      {
+        ...employee,
+        id: 'emp' + (state.employees.length + 1),
+        attendance: [],
+        leaves: []
+      },
+      ...state.employees
+    ]
+  })),
+  
+  updateEmployee: (updatedEmployee) => set((state) => ({
+    employees: state.employees.map((e) => e.id === updatedEmployee.id ? updatedEmployee : e)
+  })),
+  
+  addAttendance: (empId, record) => set((state) => ({
+    employees: state.employees.map((e) => {
+      if (e.id === empId) {
+        return {
+          ...e,
+          attendance: [record, ...e.attendance]
+        };
+      }
+      return e;
+    })
+  })),
+  
+  addLeaveRequest: (empId, request) => set((state) => ({
+    employees: state.employees.map((e) => {
+      if (e.id === empId) {
+        const newLeave: LeaveRequest = {
+          ...request,
+          id: 'lv' + (e.leaves.length + 1)
+        };
+        return {
+          ...e,
+          leaves: [newLeave, ...e.leaves]
+        };
+      }
+      return e;
+    })
+  })),
+  
+  updateLeaveStatus: (empId, requestId, status) => set((state) => ({
+    employees: state.employees.map((e) => {
+      if (e.id === empId) {
+        return {
+          ...e,
+          leaves: e.leaves.map((l) => l.id === requestId ? { ...l, status } : l)
+        };
+      }
+      return e;
+    })
+  })),
+  
+  addKpiTemplate: (template) => set((state) => ({
+    kpiTemplates: [template, ...state.kpiTemplates]
+  })),
+  
+  updateKpiItemScore: (templateId, itemId, scores) => set((state) => ({
+    kpiTemplates: state.kpiTemplates.map((t) => {
+      if (t.id === templateId) {
+        return {
+          ...t,
+          items: t.items.map((item) => {
+            if (item.id === itemId) {
+              return { ...item, ...scores };
+            }
+            return item;
+          })
+        };
+      }
+      return t;
+    })
+  })),
+  
+  addFinancialRecord: (record) => set((state) => ({
+    financeRecords: [
+      {
+        ...record,
+        id: 'fin' + (state.financeRecords.length + 1)
+      },
+      ...state.financeRecords
+    ]
+  })),
+  
+  addCampaign: (campaign) => set((state) => ({
+    campaigns: [
+      {
+        ...campaign,
+        id: 'c' + (state.campaigns.length + 1),
+        reach: Math.floor(Math.random() * 5000) + 100,
+        clicks: Math.floor(Math.random() * 500) + 10,
+        leads: Math.floor(Math.random() * 20),
+        revenueGenerated: 0
+      },
+      ...state.campaigns
+    ]
+  })),
+  
+  updateCampaign: (updatedCampaign) => set((state) => ({
+    campaigns: state.campaigns.map((c) => c.id === updatedCampaign.id ? updatedCampaign : c)
+  })),
+  
+  addFile: (file) => set((state) => ({
+    files: [
+      {
+        ...file,
+        id: 'f' + (state.files.length + 1),
+        uploadDate: new Date().toISOString().split('T')[0]
+      },
+      ...state.files
+    ]
+  })),
+  
+  deleteFile: (id) => set((state) => ({
+    files: state.files.filter((f) => f.id !== id)
+  })),
+  
+  markNotificationRead: (id) => set((state) => ({
+    notifications: state.notifications.map((n) => n.id === id ? { ...n, read: true } : n)
+  })),
+  
+  markAllNotificationsRead: () => set((state) => ({
+    notifications: state.notifications.map((n) => ({ ...n, read: true }))
+  })),
+  
+  sendChatMessage: (chatId, text) => set((state) => ({
+    chats: state.chats.map((c) => {
+      if (c.id === chatId) {
+        const newMsg: ChatMessage = {
+          id: (c.messages.length + 1).toString(),
+          sender: 'user',
+          text,
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        };
+        return {
+          ...c,
+          lastMessage: text,
+          time: newMsg.time,
+          messages: [...c.messages, newMsg]
+        };
+      }
+      return c;
+    })
+  }))
+}));

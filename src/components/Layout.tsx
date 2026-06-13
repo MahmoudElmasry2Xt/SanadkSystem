@@ -1,0 +1,387 @@
+import React, { useState } from 'react';
+import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import { useAppDispatch, useAppSelector } from '../store';
+import { logout } from '../store/authSlice';
+import { markNotificationRead } from '../store/notificationsSlice';
+import logo from '../assets/logo.jpg';
+import {
+  LayoutDashboard,
+  Users,
+  CheckSquare,
+  Briefcase,
+  TrendingUp,
+  DollarSign,
+  Megaphone,
+  FolderOpen,
+  Bell,
+  BarChart3,
+  Globe,
+  Menu,
+  X,
+  ChevronRight,
+  Settings,
+  Cpu,
+  LogOut
+} from 'lucide-react';
+
+export const Layout: React.FC = () => {
+  const { t, i18n } = useTranslation();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const dispatch = useAppDispatch();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+
+  const { user } = useAppSelector((state) => state.auth);
+  const { notifications } = useAppSelector((state) => state.notifications);
+
+  const unreadNotifications = notifications.filter((n) => !n.read);
+
+  const toggleLanguage = () => {
+    const nextLang = i18n.language === 'ar' ? 'en' : 'ar';
+    i18n.changeLanguage(nextLang);
+  };
+
+  const handleLogout = () => {
+    dispatch(logout());
+    navigate('/auth/login');
+  };
+
+  // Navigation Items defined dynamically based on user permissions
+  const navItems = [];
+
+  // Dashboard - always visible
+  navItems.push({ path: '/', label: t('dashboard'), icon: LayoutDashboard });
+
+  // CRM Module (requires VIEW_LEADS permission)
+  if (user?.permissions.includes('VIEW_LEADS') || user?.role === 'Client') {
+    const crmSubItems = [];
+    if (user?.role !== 'Client') {
+      crmSubItems.push({ path: '/crm/leads', label: t('leads') });
+      crmSubItems.push({ path: '/crm/pipeline', label: t('pipeline') });
+      crmSubItems.push({ path: '/crm/communication', label: t('communication') });
+    } else {
+      crmSubItems.push({ path: '/crm/communication', label: 'المحادثات / Chats' });
+    }
+    
+    navItems.push({
+      label: t('crm'),
+      icon: Users,
+      subItems: crmSubItems
+    });
+  }
+
+  // Tasks Module
+  if (user?.role !== 'Client') {
+    navItems.push({ path: '/tasks', label: t('tasks'), icon: CheckSquare });
+  }
+
+  // Employees Module (requires VIEW_EMPLOYEES permission)
+  if (user?.permissions.includes('VIEW_EMPLOYEES')) {
+    navItems.push({
+      label: t('employees'),
+      icon: Briefcase,
+      subItems: [
+        { path: '/employees', label: t('employeeList') },
+        { path: '/employees/attendance', label: t('attendance') },
+        { path: '/employees/leaves', label: t('leaveRequests') }
+      ]
+    });
+  } else if (user?.role === 'Employee') {
+    // Basic Employee leaves/attendance views can be put here
+    navItems.push({
+      label: t('employees'),
+      icon: Briefcase,
+      subItems: [
+        { path: '/employees/attendance', label: t('attendance') },
+        { path: '/employees/leaves', label: t('leaveRequests') }
+      ]
+    });
+  }
+
+  // KPI Module (requires VIEW_KPI permission)
+  if (user?.permissions.includes('VIEW_KPI')) {
+    const kpiSub = [];
+    if (user?.permissions.includes('MANAGE_KPI')) {
+      kpiSub.push({ path: '/kpi/templates', label: t('kpiBuilder') });
+    }
+    kpiSub.push({ path: '/kpi/evaluations', label: t('evaluationFlow') });
+    kpiSub.push({ path: '/kpi/dashboard', label: t('kpiDashboard') });
+
+    navItems.push({
+      label: t('kpi'),
+      icon: TrendingUp,
+      subItems: kpiSub
+    });
+  }
+
+  // Finance Module (requires VIEW_FINANCE permission)
+  if (user?.permissions.includes('VIEW_FINANCE')) {
+    const financeSub = [];
+    financeSub.push({ path: '/finance/revenues', label: t('revenues') });
+    financeSub.push({ path: '/finance/expenses', label: t('expenses') });
+    financeSub.push({ path: '/finance/reports', label: t('financialReports') });
+
+    navItems.push({
+      label: t('finance'),
+      icon: DollarSign,
+      subItems: financeSub
+    });
+  }
+
+  // Marketing Module (requires VIEW_MARKETING permission)
+  if (user?.permissions.includes('VIEW_MARKETING')) {
+    navItems.push({
+      label: t('marketing'),
+      icon: Megaphone,
+      subItems: [
+        { path: '/marketing/campaigns', label: t('campaigns') },
+        { path: '/marketing/results', label: t('results') }
+      ]
+    });
+  }
+
+  // Files Module (always visible for doc storage)
+  navItems.push({ path: '/files', label: t('files'), icon: FolderOpen });
+
+  // Reports (requires VIEW_REPORTS permission)
+  if (user?.permissions.includes('VIEW_REPORTS')) {
+    navItems.push({ path: '/reports', label: t('reports'), icon: BarChart3 });
+  }
+
+  // Automations (requires MANAGE_AUTOMATIONS permission)
+  if (user?.permissions.includes('MANAGE_AUTOMATIONS')) {
+    navItems.push({ path: '/automations', label: 'الأتمتة / Automations', icon: Cpu });
+  }
+
+  // Settings (requires MANAGE_SETTINGS permission)
+  if (user?.permissions.includes('MANAGE_SETTINGS')) {
+    navItems.push({ path: '/settings', label: 'الإعدادات / Settings', icon: Settings });
+  }
+
+  const isActive = (path?: string, subItems?: { path: string }[]) => {
+    if (path && location.pathname === path) return true;
+    if (subItems && subItems.some((item) => location.pathname === item.path)) return true;
+    return false;
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50 flex flex-col font-outfit text-gray-800">
+      {/* Top Header */}
+      <header className="sticky top-0 z-40 bg-white border-b border-gray-100 h-16 flex items-center justify-between px-4 sm:px-6 shadow-sm">
+        <div className="flex items-center gap-3">
+          {/* Sidebar Toggle (Mobile) */}
+          <button
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className="md:hidden p-2 rounded-xl text-gray-600 hover:bg-gray-100 focus:outline-none"
+          >
+            <Menu className="w-6 h-6" />
+          </button>
+
+          {/* Top Navbar Logo & App Name */}
+          <Link to="/" className="flex items-center gap-2">
+            <img
+              src={logo}
+              alt="Company Logo"
+              className="w-8 h-8 object-contain rounded-lg border border-gray-100 shadow-sm"
+            />
+            <span className="font-extrabold text-xl tracking-tight text-gray-900">
+              {t('appName')}<span className="text-red-600">.</span>
+            </span>
+          </Link>
+        </div>
+
+        {/* Action Controls */}
+        <div className="flex items-center gap-2 sm:gap-4">
+          {/* Language Toggle */}
+          <button
+            onClick={toggleLanguage}
+            className="p-2.5 rounded-xl border border-gray-100 text-gray-600 hover:bg-red-50 hover:text-red-600 transition-all duration-200 flex items-center gap-1.5 text-sm font-medium"
+            title="Switch Language"
+          >
+            <Globe className="w-4 h-4" />
+            <span className="hidden sm:inline">{i18n.language === 'ar' ? 'English' : 'العربية'}</span>
+          </button>
+
+          {/* User Profile Info & Role Badge */}
+          <div className="flex items-center gap-2.5">
+            <div className="hidden md:flex flex-col text-end">
+              <span className="text-xs font-bold text-gray-950">{user?.name}</span>
+              <span className="text-[9px] text-gray-400 font-mono">{user?.email}</span>
+            </div>
+            <div className="px-3 py-1.5 rounded-xl border border-red-100 text-red-600 bg-red-50/50 text-xs font-black select-none">
+              <span>{user?.role}</span>
+            </div>
+          </div>
+
+          {/* Notifications Dropdown */}
+          <div className="relative">
+            <button
+              onClick={() => setNotificationsOpen(!notificationsOpen)}
+              className="p-2.5 rounded-xl border border-gray-100 text-gray-600 hover:bg-red-50 hover:text-red-600 transition-all duration-200 relative"
+            >
+              <Bell className="w-5 h-5" />
+              {unreadNotifications.length > 0 && (
+                <span className="absolute top-1.5 right-1.5 rtl:left-1.5 rtl:right-auto w-4 h-4 bg-red-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-white animate-pulse">
+                  {unreadNotifications.length}
+                </span>
+              )}
+            </button>
+
+            {notificationsOpen && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setNotificationsOpen(false)} />
+                <div className="absolute right-0 rtl:left-0 rtl:right-auto mt-2 w-80 bg-white border border-gray-100 rounded-2xl shadow-xl z-50 p-1">
+                  <div className="px-4 py-3 border-b border-gray-50 flex items-center justify-between">
+                    <span className="font-bold text-sm text-gray-900">{t('notifications')}</span>
+                    <Link
+                      to="/notifications"
+                      onClick={() => setNotificationsOpen(false)}
+                      className="text-xs text-red-600 hover:underline font-semibold"
+                    >
+                      {t('viewDetails')}
+                    </Link>
+                  </div>
+                  <div className="max-h-72 overflow-y-auto p-1">
+                    {notifications.slice(0, 5).map((n) => (
+                      <div
+                        key={n.id}
+                        onClick={() => {
+                          dispatch(markNotificationRead(n.id));
+                        }}
+                        className={`p-3 rounded-xl mb-1 cursor-pointer transition-colors ${
+                          !n.read ? 'bg-red-50/20 hover:bg-red-50/40 border-s-4 border-red-600' : 'hover:bg-gray-50'
+                        }`}
+                      >
+                        <div className="flex justify-between items-start mb-0.5">
+                          <span className="font-bold text-xs text-gray-900">{n.title}</span>
+                          <span className="text-[10px] text-gray-400">{new Date(n.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                        </div>
+                        <p className="text-xs text-gray-600 line-clamp-2">{n.message}</p>
+                      </div>
+                    ))}
+                    {notifications.length === 0 && (
+                      <div className="py-8 text-center text-xs text-gray-400">
+                        لا توجد إشعارات جديدة
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Logout Button */}
+          <button
+            onClick={handleLogout}
+            className="p-2.5 rounded-xl border border-gray-100 text-gray-600 hover:bg-red-50 hover:text-red-600 transition-all duration-200"
+            title="Log Out"
+          >
+            <LogOut className="w-5 h-5" />
+          </button>
+        </div>
+      </header>
+
+      {/* Main Container */}
+      <div className="flex flex-1 relative">
+        {/* Sidebar Navigation */}
+        <aside
+          className={`fixed inset-y-0 start-0 z-30 w-64 bg-white border-e border-gray-100 pt-16 transform transition-transform duration-300 ease-in-out md:translate-x-0 md:sticky md:top-16 md:h-[calc(100vh-4rem)] ${
+            sidebarOpen ? 'translate-x-0' : '-translate-x-full rtl:translate-x-full md:rtl:translate-x-0'
+          }`}
+        >
+          {/* Mobile close button */}
+          <button
+            onClick={() => setSidebarOpen(false)}
+            className="md:hidden absolute top-4 end-4 p-2 rounded-xl text-gray-500 hover:bg-gray-100"
+          >
+            <X className="w-5 h-5" />
+          </button>
+
+          <nav className="p-4 space-y-1 h-full overflow-y-auto pb-20">
+            {/* Sidebar Logo Header */}
+            <div className="flex items-center gap-3 px-3.5 py-3 mb-6 border-b border-gray-50 shrink-0">
+              <img
+                src={logo}
+                alt="Sidebar Logo"
+                className="w-7 h-7 object-contain rounded-lg border border-gray-100"
+              />
+              <span className="font-extrabold text-sm text-gray-900 tracking-tight">
+                {t('appName')}
+              </span>
+            </div>
+
+            {navItems.map((item, idx) => {
+              if (item.subItems) {
+                return (
+                  <div key={idx} className="space-y-1">
+                    <div className="flex items-center gap-3 px-3.5 py-3 text-sm font-semibold rounded-xl text-gray-400 uppercase tracking-wider mt-4 first:mt-0">
+                      <item.icon className="w-4 h-4 text-gray-400" />
+                      <span>{item.label}</span>
+                    </div>
+                    <div className="ps-4 space-y-1">
+                      {item.subItems.map((sub, subIdx) => {
+                        const active = isActive(sub.path);
+                        return (
+                          <Link
+                            key={subIdx}
+                            to={sub.path}
+                            onClick={() => setSidebarOpen(false)}
+                            className={`flex items-center justify-between px-3.5 py-2.5 text-sm font-medium rounded-xl transition-all duration-200 ${
+                              active
+                                ? 'bg-red-600 text-white shadow-sm shadow-red-100 font-bold'
+                                : 'text-gray-600 hover:bg-red-50 hover:text-red-600'
+                            }`}
+                          >
+                            <span>{sub.label}</span>
+                            {active && <ChevronRight className="w-3.5 h-3.5 rtl:rotate-180" />}
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              }
+
+              const Icon = item.icon!;
+              const active = isActive(item.path);
+              return (
+                <Link
+                  key={idx}
+                  to={item.path!}
+                  onClick={() => setSidebarOpen(false)}
+                  className={`flex items-center justify-between px-3.5 py-3 text-sm font-semibold rounded-xl transition-all duration-200 ${
+                    active
+                      ? 'bg-red-600 text-white shadow-sm shadow-red-100 font-bold'
+                      : 'text-gray-600 hover:bg-red-50 hover:text-red-600'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <Icon className="w-5 h-5" />
+                    <span>{item.label}</span>
+                  </div>
+                  {active && <ChevronRight className="w-4 h-4 rtl:rotate-180" />}
+                </Link>
+              );
+            })}
+          </nav>
+        </aside>
+
+        {/* Sidebar overlay for mobile */}
+        {sidebarOpen && (
+          <div
+            onClick={() => setSidebarOpen(false)}
+            className="fixed inset-0 bg-gray-900/20 backdrop-blur-sm z-20 md:hidden"
+          />
+        )}
+
+        {/* Content Area */}
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-x-hidden min-h-[calc(100vh-4rem)]">
+          <Outlet />
+        </main>
+      </div>
+    </div>
+  );
+};
+export default Layout;
