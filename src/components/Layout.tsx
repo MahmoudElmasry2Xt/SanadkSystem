@@ -337,18 +337,23 @@ export const Layout: React.FC = () => {
                     {/* Desktop/Tablet view */}
                     <div className="hidden md:block">
                       {isCollapsed ? (
-                        <Link
-                          to={item.subItems[0].path}
-                          className={`flex items-center justify-center p-3 text-sm font-semibold rounded-xl transition-all duration-200 ${
+                        <div
+                          className={`flex items-center justify-center p-3 text-sm font-semibold rounded-xl transition-all duration-200 relative ${
                             isParentActive
                               ? 'bg-red-600 text-white shadow-sm shadow-red-100 font-bold'
                               : 'text-gray-600 hover:bg-red-50 hover:text-red-600'
                           }`}
                         >
-                          <Icon className="w-5 h-5 shrink-0" />
+                          <Link
+                            to={item.subItems[0].path}
+                            className="flex items-center justify-center w-full h-full text-current focus:outline-none"
+                            title={item.label}
+                          >
+                            <Icon className="w-5 h-5 shrink-0" />
+                          </Link>
                           
                           {/* Dropdown Tooltip on hover */}
-                          <div className="absolute start-[72px] top-0 z-50 hidden group-hover:flex flex-col bg-white border border-gray-100 shadow-xl rounded-2xl p-2 w-48 text-start">
+                          <div className="absolute start-[72px] top-0 z-50 hidden group-hover:flex flex-col bg-white border border-gray-100 shadow-xl rounded-2xl p-2 w-48 text-start text-gray-800">
                             <div className="px-3 py-1.5 text-[10px] font-black text-gray-400 uppercase tracking-wider border-b border-gray-50 mb-1">
                               {item.label}
                             </div>
@@ -369,7 +374,7 @@ export const Layout: React.FC = () => {
                               );
                             })}
                           </div>
-                        </Link>
+                        </div>
                       ) : (
                         <div className="space-y-1">
                           <div className="flex items-center gap-3 px-3.5 py-3 text-sm font-semibold rounded-xl text-gray-400 uppercase tracking-wider mt-4 first:mt-0">
