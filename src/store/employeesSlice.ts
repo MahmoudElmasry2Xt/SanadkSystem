@@ -6,6 +6,7 @@ export interface AttendanceRecord {
   checkOut: string;
   workingHours: number;
   delayMinutes: number;
+  status?: 'Present' | 'Late' | 'Absent';
 }
 
 export interface LeaveRequest {

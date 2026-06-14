@@ -34,6 +34,7 @@ export interface AttendanceRecord {
   checkOut: string;
   workingHours: number;
   delayMinutes: number;
+  status?: 'Present' | 'Late' | 'Absent';
 }
 
 export interface LeaveRequest {
@@ -167,6 +168,8 @@ interface AppState {
   addEmployee: (employee: Omit<Employee, 'id' | 'attendance' | 'leaves'>) => void;
   updateEmployee: (employee: Employee) => void;
   addAttendance: (empId: string, record: AttendanceRecord) => void;
+  serverCheckIn: (empId: string) => { success: boolean; message: string };
+  serverCheckOut: (empId: string) => { success: boolean; message: string };
   addLeaveRequest: (empId: string, request: Omit<LeaveRequest, 'id'>) => void;
   updateLeaveStatus: (empId: string, requestId: string, status: 'Approved' | 'Rejected') => void;
   addKpiTemplate: (template: KPITemplate) => void;
@@ -438,6 +441,150 @@ export const useAppStore = create<AppState>((set) => ({
       return e;
     })
   })),
+
+  serverCheckIn: (empId) => {
+    let result = { success: false, message: '' };
+    
+    set((state) => {
+      const employee = state.employees.find((e) => e.id === empId);
+      if (!employee) {
+        result = { success: false, message: 'Employee not found' };
+        return {};
+      }
+
+      const now = new Date();
+      const dateStr = now.toISOString().split('T')[0];
+      
+      const alreadyCheckedIn = employee.attendance.some((a) => a.date === dateStr);
+      if (alreadyCheckedIn) {
+        result = { success: false, message: 'Already checked in today' };
+        return {};
+      }
+
+      const currentHour = now.getHours();
+      const currentMinute = now.getMinutes();
+      const checkInTime = `${currentHour.toString().padStart(2, '0')}:${currentMinute.toString().padStart(2, '0')}`;
+
+      const startHour = 9;
+      const startMinute = 0;
+      const gracePeriodMinutes = 15;
+      const cutoffHour = 10;
+      const cutoffMinute = 30;
+
+      const checkInMinutesTotal = currentHour * 60 + currentMinute;
+      const startMinutesTotal = startHour * 60 + startMinute;
+      const cutoffMinutesTotal = cutoffHour * 60 + cutoffMinute;
+
+      let delayMinutes = checkInMinutesTotal - startMinutesTotal;
+      if (delayMinutes < 0) delayMinutes = 0;
+
+      let status: 'Present' | 'Late' | 'Absent' = 'Present';
+
+      if (checkInMinutesTotal > cutoffMinutesTotal) {
+        status = 'Absent';
+      } else if (delayMinutes > gracePeriodMinutes) {
+        status = 'Late';
+      } else {
+        status = 'Present';
+      }
+
+      const newRecord: AttendanceRecord = {
+        date: dateStr,
+        checkIn: checkInTime,
+        checkOut: '',
+        workingHours: 0,
+        delayMinutes: delayMinutes,
+        status: status
+      };
+
+      result = { 
+        success: true, 
+        message: status === 'Present' 
+          ? 'Checked in successfully! Status: Present' 
+          : status === 'Late' 
+            ? `Checked in, but you are Late by ${delayMinutes} minutes.` 
+            : 'Checked in too late! Status: Absent.'
+      };
+
+      return {
+        employees: state.employees.map((e) => {
+          if (e.id === empId) {
+            return {
+              ...e,
+              attendance: [newRecord, ...e.attendance]
+            };
+          }
+          return e;
+        })
+      };
+    });
+
+    return result;
+  },
+
+  serverCheckOut: (empId) => {
+    let result = { success: false, message: '' };
+
+    set((state) => {
+      const employee = state.employees.find((e) => e.id === empId);
+      if (!employee) {
+        result = { success: false, message: 'Employee not found' };
+        return {};
+      }
+
+      const now = new Date();
+      const dateStr = now.toISOString().split('T')[0];
+      
+      const todayRecordIdx = employee.attendance.findIndex((a) => a.date === dateStr);
+      if (todayRecordIdx === -1) {
+        result = { success: false, message: 'No check-in record found for today' };
+        return {};
+      }
+
+      const todayRecord = employee.attendance[todayRecordIdx];
+      if (todayRecord.checkOut) {
+        result = { success: false, message: 'Already checked out today' };
+        return {};
+      }
+
+      const currentHour = now.getHours();
+      const currentMinute = now.getMinutes();
+      const checkOutTime = `${currentHour.toString().padStart(2, '0')}:${currentMinute.toString().padStart(2, '0')}`;
+
+      const [inHour, inMin] = todayRecord.checkIn.split(':').map(Number);
+      const checkInMinutes = inHour * 60 + inMin;
+      const checkOutMinutes = currentHour * 60 + currentMinute;
+      
+      let workHours = 0;
+      if (checkOutMinutes > checkInMinutes) {
+        workHours = Number(((checkOutMinutes - checkInMinutes) / 60).toFixed(2));
+      }
+
+      const updatedRecord: AttendanceRecord = {
+        ...todayRecord,
+        checkOut: checkOutTime,
+        workingHours: workHours
+      };
+
+      result = { success: true, message: `Checked out successfully! Total Hours: ${workHours}` };
+
+      return {
+        employees: state.employees.map((e) => {
+          if (e.id === empId) {
+            const updatedAttendance = [...e.attendance];
+            updatedAttendance[todayRecordIdx] = updatedRecord;
+            return {
+              ...e,
+              attendance: updatedAttendance
+            };
+          }
+          return e;
+        })
+      };
+    });
+
+    return result;
+  },
   
   addLeaveRequest: (empId, request) => set((state) => ({
     employees: state.employees.map((e) => {

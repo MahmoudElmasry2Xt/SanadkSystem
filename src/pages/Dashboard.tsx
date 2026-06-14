@@ -495,12 +495,12 @@ export const Dashboard: React.FC = () => {
           {/* ROLE-BASED WIDGETS SECTION */}
           <div className="space-y-6">
             {/* ROW 1 */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="flex flex-col lg:flex-row gap-6">
               {/* Widget 1: Revenue vs Expenses Chart (CEO, Finance Manager only) */}
               {(isCEO || isFinance) && (
-                <div className="bg-white p-3 rounded-2xl border border-gray-100 shadow-sm flex flex-col justify-between">
+                <div className="flex-1 min-w-0 w-full bg-white p-3 rounded-2xl border border-gray-100 shadow-sm flex flex-col justify-between">
                   <div className="flex justify-between items-center mb-4">
-                    <h4 className="font-extrabold text-sm text-gray-900">{isRtl ? 'تحليل الإيرادات والمصروفات' : '1. Revenue vs Expenses'}</h4>
+                    <h4 className="font-extrabold text-sm text-gray-900">{isRtl ? 'تحليل الإيرادات والمصروفات' : ' Revenue vs Expenses'}</h4>
                     <TrendingUp className="w-4 h-4 text-red-600" />
                   </div>
                   <div className="h-60">
@@ -531,8 +531,8 @@ export const Dashboard: React.FC = () => {
 
               {/* Widget 2: Leads by Source (CEO, GM, Sales Manager, Marketing Manager only) */}
               {(isCEO || isGM || isSalesManager || isMarketing) && (
-                <div className="bg-white p-3 rounded-2xl border border-gray-100 shadow-sm flex flex-col justify-between">
-                  <h4 className="font-extrabold text-sm text-gray-900 mb-4">{isRtl ? 'قنوات جذب العملاء' : '2. Leads by Source'}</h4>
+                <div className="flex-1 min-w-0 w-full bg-white p-3 rounded-2xl border border-gray-100 shadow-sm flex flex-col justify-between">
+                  <h4 className="font-extrabold text-sm text-gray-900 mb-4">{isRtl ? 'قنوات جذب العملاء' : ' Leads by Source'}</h4>
                   <div className="h-52 flex justify-center items-center">
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
@@ -567,8 +567,8 @@ export const Dashboard: React.FC = () => {
 
               {/* Widget 3: Leads by Governorate (CEO, GM, Sales Manager only) */}
               {(isCEO || isGM || isSalesManager) && (
-                <div className="bg-white p-3 rounded-2xl border border-gray-100 shadow-sm flex flex-col justify-between">
-                  <h4 className="font-extrabold text-sm text-gray-900 mb-4">{isRtl ? 'العملاء حسب المحافظة' : '3. Leads by Governorate'}</h4>
+                <div className="flex-1 min-w-0 w-full bg-white p-3 rounded-2xl border border-gray-100 shadow-sm flex flex-col justify-between">
+                  <h4 className="font-extrabold text-sm text-gray-900 mb-4">{isRtl ? 'العملاء حسب المحافظة' : ' Leads by Governorate'}</h4>
                   <div className="h-60">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={data.leadsByGovernorate} layout="vertical" margin={{ top: 10, right: 10, bottom: 5 }}>
@@ -585,11 +585,11 @@ export const Dashboard: React.FC = () => {
             </div>
 
             {/* ROW 2 */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="flex flex-col lg:flex-row gap-6">
               {/* Widget 4: Monthly Profit Trend (CEO, Finance Manager only) */}
               {(isCEO || isFinance) && (
-                <div className="bg-white p-3 rounded-2xl border border-gray-100 shadow-sm flex flex-col justify-between">
-                  <h4 className="font-extrabold text-sm text-gray-900 mb-4">{isRtl ? 'منحنى الأرباح الشهرية' : '4. Monthly Profit Trend'}</h4>
+                <div className="flex-1 min-w-0 w-full bg-white p-3 rounded-2xl border border-gray-100 shadow-sm flex flex-col justify-between">
+                  <h4 className="font-extrabold text-sm text-gray-900 mb-4">{isRtl ? 'منحنى الأرباح الشهرية' : ' Monthly Profit Trend'}</h4>
                   <div className="h-60">
                     <ResponsiveContainer width="100%" height="100%">
                       <LineChart data={data.monthlyProfitTrend} margin={{ top: 10, right: 10,  bottom: 0 }}>
@@ -606,8 +606,8 @@ export const Dashboard: React.FC = () => {
 
               {/* Widget 5: Pipeline Funnel Flow (CEO, GM, Sales Manager, Sales Agent only) */}
               {(isCEO || isGM || isSalesManager || isEmployee) && (
-                <div className="bg-white p-3 rounded-2xl border border-gray-100 shadow-sm flex flex-col justify-between">
-                  <h4 className="font-extrabold text-sm text-gray-900 mb-4">{isRtl ? 'خط سير قنوات البيع' : '5. Pipeline Funnel Flow'}</h4>
+                <div className="flex-1 min-w-0 w-full bg-white p-3 rounded-2xl border border-gray-100 shadow-sm flex flex-col justify-between">
+                  <h4 className="font-extrabold text-sm text-gray-900 mb-4">{isRtl ? 'خط سير قنوات البيع' : ' Pipeline Funnel Flow'}</h4>
                   <div className="space-y-3 my-auto">
                     {data.pipelineFunnel.map((item, idx) => {
                       const maxVal = data.pipelineFunnel[0].value;
@@ -633,8 +633,8 @@ export const Dashboard: React.FC = () => {
 
               {/* Widget 6: Marketing ROI (CEO, Marketing Manager only) */}
               {(isCEO || isMarketing) && (
-                <div className="bg-white p-3 rounded-2xl border border-gray-100 shadow-sm flex flex-col justify-between">
-                  <h4 className="font-extrabold text-sm text-gray-900 mb-4">{isRtl ? 'عائد الاستثمار للحملات' : '6. Marketing ROI'}</h4>
+                <div className="flex-1 min-w-0 w-full bg-white p-3 rounded-2xl border border-gray-100 shadow-sm flex flex-col justify-between">
+                  <h4 className="font-extrabold text-sm text-gray-900 mb-4">{isRtl ? 'عائد الاستثمار للحملات' : ' Marketing ROI'}</h4>
                   <div className="h-60">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={data.marketingROI} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
@@ -655,11 +655,11 @@ export const Dashboard: React.FC = () => {
             </div>
 
             {/* ROW 3 */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="flex flex-col lg:flex-row gap-6">
               {/* Widget 7: KPI Achievement Trend (CEO, GM, HR Manager only) */}
               {(isCEO || isGM || isHR) && (
-                <div className="bg-white p-3 rounded-2xl border border-gray-100 shadow-sm flex flex-col justify-between">
-                  <h4 className="font-extrabold text-sm text-gray-900 mb-4">{isRtl ? 'منحنى تحقيق الأهداف الكلية' : '7. KPI Achievement Trend'}</h4>
+                <div className="flex-1 min-w-0 w-full bg-white p-3 rounded-2xl border border-gray-100 shadow-sm flex flex-col justify-between">
+                  <h4 className="font-extrabold text-sm text-gray-900 mb-4">{isRtl ? 'منحنى تحقيق الأهداف الكلية' : ' KPI Achievement Trend'}</h4>
                   <div className="h-60">
                     <ResponsiveContainer width="100%" height="100%">
                       <LineChart data={data.kpiAchievementTrend} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
@@ -676,8 +676,8 @@ export const Dashboard: React.FC = () => {
 
               {/* Widget 8: Department Performance Ranking (CEO, GM, HR Manager only) */}
               {(isCEO || isGM || isHR) && (
-                <div className="bg-white p-3 rounded-2xl border border-gray-100 shadow-sm flex flex-col justify-between">
-                  <h4 className="font-extrabold text-sm text-gray-900 mb-4">{isRtl ? 'تقييم كفاءة الأقسام' : '8. Department Rankings'}</h4>
+                <div className="flex-1 min-w-0 w-full bg-white p-3 rounded-2xl border border-gray-100 shadow-sm flex flex-col justify-between">
+                  <h4 className="font-extrabold text-sm text-gray-900 mb-4">{isRtl ? 'تقييم كفاءة الأقسام' : ' Department Rankings'}</h4>
                   <div className="space-y-4 my-auto">
                     {data.departmentPerformance.map((dept) => (
                       <div key={dept.department} className="space-y-1">
@@ -699,8 +699,8 @@ export const Dashboard: React.FC = () => {
 
               {/* Widget 9: Employee Performance Ranking (CEO, GM, HR Manager, Team Leader, Employee only) */}
               {(isCEO || isGM || isHR || isTeamLeader || isEmployee) && (
-                <div className="bg-white p-3 rounded-2xl border border-gray-100 shadow-sm flex flex-col justify-between">
-                  <h4 className="font-extrabold text-sm text-gray-900 mb-4">{isRtl ? 'تقييم كفاءة الموظفين' : '9. Employee Performance'}</h4>
+                <div className="flex-1 min-w-0 w-full bg-white p-3 rounded-2xl border border-gray-100 shadow-sm flex flex-col justify-between">
+                  <h4 className="font-extrabold text-sm text-gray-900 mb-4">{isRtl ? 'تقييم كفاءة الموظفين' : ' Employee Performance'}</h4>
                   <div className="space-y-4 my-auto">
                     {data.employeePerformance.slice(0, 5).map((emp) => (
                       <div key={emp.name} className="space-y-1">
@@ -722,11 +722,11 @@ export const Dashboard: React.FC = () => {
             </div>
 
             {/* ROW 4 */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="flex flex-col lg:flex-row gap-6">
               {/* Widget 10: Top 5 Employees (CEO, GM, HR Manager, Team Leader only) */}
               {(isCEO || isGM || isHR || isTeamLeader) && (
-                <div className="bg-white p-3 rounded-2xl border border-gray-100 shadow-sm flex flex-col justify-between">
-                  <h4 className="font-extrabold text-sm text-gray-900 mb-3">{isRtl ? 'أفضل 5 موظفين أداءً' : '10. Top 5 Employees'}</h4>
+                <div className="flex-1 min-w-0 w-full bg-white p-3 rounded-2xl border border-gray-100 shadow-sm flex flex-col justify-between">
+                  <h4 className="font-extrabold text-sm text-gray-900 mb-3">{isRtl ? 'أفضل 5 موظفين أداءً' : ' Top 5 Employees'}</h4>
                   <div className="divide-y divide-gray-50">
                     {data.topEmployees.map((emp, idx) => (
                       <div key={emp.name} className="py-2.5 flex justify-between items-center first:pt-0 last:pb-0">
@@ -750,8 +750,8 @@ export const Dashboard: React.FC = () => {
 
               {/* Widget 11: Top 5 Departments (CEO, GM, HR Manager only) */}
               {(isCEO || isGM || isHR) && (
-                <div className="bg-white p-3 rounded-2xl border border-gray-100 shadow-sm flex flex-col justify-between">
-                  <h4 className="font-extrabold text-sm text-gray-900 mb-3">{isRtl ? 'أداء الأقسام الكلي' : '11. Top 5 Departments'}</h4>
+                <div className="flex-1 min-w-0 w-full bg-white p-3 rounded-2xl border border-gray-100 shadow-sm flex flex-col justify-between">
+                  <h4 className="font-extrabold text-sm text-gray-900 mb-3">{isRtl ? 'أداء الأقسام الكلي' : ' Top 5 Departments'}</h4>
                   <div className="divide-y divide-gray-50">
                     {data.topDepartments.map((dept) => (
                       <div key={dept.name} className="py-2.5 flex justify-between items-center first:pt-0 last:pb-0">
@@ -771,9 +771,9 @@ export const Dashboard: React.FC = () => {
               )}
 
               {/* Widget 12: Recent Activities (All users see activities filtered/unfiltered) */}
-              <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex flex-col justify-between">
+              <div className="flex-1 min-w-0 w-full bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex flex-col justify-between">
                 <div className="flex justify-between items-center mb-3">
-                  <h4 className="font-extrabold text-sm text-gray-900">{isRtl ? 'آخر العمليات والتحديثات' : '12. Recent Activities'}</h4>
+                  <h4 className="font-extrabold text-sm text-gray-900">{isRtl ? 'آخر العمليات والتحديثات' : ' Recent Activities'}</h4>
                   <Activity className="w-4 h-4 text-red-600 animate-pulse" />
                 </div>
                 <div className="space-y-3 overflow-y-auto pr-1">

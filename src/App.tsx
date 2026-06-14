@@ -24,7 +24,7 @@ import { Files } from './pages/Files';
 import { Notifications } from './pages/Notifications';
 import { Reports } from './pages/Reports';
 import { Settings } from './pages/Settings';
-import { Automations } from './pages/Automations';
+// import { Automations } from './pages/Automations';
 
 // Auth Pages
 import { Login } from './pages/auth/Login';
@@ -273,6 +273,7 @@ const router = createBrowserRouter([
           </ProtectedRoute>
         )
       },
+      /*
       {
         path: '/automations',
         element: (
@@ -281,6 +282,7 @@ const router = createBrowserRouter([
           </ProtectedRoute>
         )
       },
+      */
       {
         path: '/404',
         element: <NotFound />

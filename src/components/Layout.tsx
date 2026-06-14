@@ -21,7 +21,6 @@ import {
   X,
   ChevronRight,
   Settings,
-  Cpu,
   LogOut,
   PanelLeft,
   PanelLeftClose
@@ -94,26 +93,22 @@ export const Layout: React.FC = () => {
     navItems.push({ path: '/tasks', label: t('tasks'), icon: CheckSquare });
   }
 
-  // Employees Module (requires VIEW_EMPLOYEES permission)
-  if (user?.permissions.includes('VIEW_EMPLOYEES')) {
+  // Employees Module
+  if (user?.role !== 'Client') {
+    const employeeSubItems = [];
+    
+    // Only HR, CEO, GM can see full employee list
+    if (user?.permissions.includes('VIEW_EMPLOYEES')) {
+      employeeSubItems.push({ path: '/employees', label: t('employeeList') });
+    }
+    
+    employeeSubItems.push({ path: '/employees/attendance', label: t('attendance') });
+    employeeSubItems.push({ path: '/employees/leaves', label: t('leaveRequests') });
+    
     navItems.push({
       label: t('employees'),
       icon: Briefcase,
-      subItems: [
-        { path: '/employees', label: t('employeeList') },
-        { path: '/employees/attendance', label: t('attendance') },
-        { path: '/employees/leaves', label: t('leaveRequests') }
-      ]
-    });
-  } else if (user?.role === 'Employee') {
-    // Basic Employee leaves/attendance views can be put here
-    navItems.push({
-      label: t('employees'),
-      icon: Briefcase,
-      subItems: [
-        { path: '/employees/attendance', label: t('attendance') },
-        { path: '/employees/leaves', label: t('leaveRequests') }
-      ]
+      subItems: employeeSubItems
     });
   }
 
@@ -167,10 +162,10 @@ export const Layout: React.FC = () => {
     navItems.push({ path: '/reports', label: t('reports'), icon: BarChart3 });
   }
 
-  // Automations (requires MANAGE_AUTOMATIONS permission)
-  if (user?.permissions.includes('MANAGE_AUTOMATIONS')) {
-    navItems.push({ path: '/automations', label: 'الأتمتة / Automations', icon: Cpu });
-  }
+  // Automations (requires MANAGE_AUTOMATIONS permission) - Temporarily disabled
+  // if (user?.permissions.includes('MANAGE_AUTOMATIONS')) {
+  //   navItems.push({ path: '/automations', label: 'الأتمتة / Automations', icon: Cpu });
+  // }
 
   // Settings (requires MANAGE_SETTINGS permission)
   if (user?.permissions.includes('MANAGE_SETTINGS')) {
@@ -311,7 +306,7 @@ export const Layout: React.FC = () => {
       <div className="flex flex-1 relative">
         {/* Sidebar Navigation */}
         <aside
-          className={`fixed inset-y-0 start-0 z-30 bg-white border-e border-gray-100 pt-16 transform transition-all duration-300 ease-in-out md:translate-x-0 md:sticky md:top-16 md:h-[calc(100vh-4rem)] ${
+          className={`fixed inset-y-0 start-0 z-30 bg-white border-e border-gray-100 pt-16 md:pt-2 transform transition-all duration-300 ease-in-out md:translate-x-0 md:sticky md:top-16 md:h-[calc(100vh-4rem)] ${
             sidebarOpen ? 'translate-x-0' : '-translate-x-full rtl:translate-x-full md:rtl:translate-x-0'
           } ${isCollapsed ? 'w-64 md:w-20' : 'w-64 md:w-[280px]'}`}
         >

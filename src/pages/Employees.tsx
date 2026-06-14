@@ -312,18 +312,37 @@ export const Employees: React.FC = () => {
       </div>
 
       {/* Filter Row */}
-      <div className="custom-card flex items-center gap-4 p-4">
-        <div className="relative w-full">
-          <Search className="w-4 h-4 text-gray-400 absolute start-3 top-3.5" />
-          <input
-            type="text"
-            placeholder={isRtl ? 'ابحث باسم الموظف، القسم أو الوظيفة...' : 'Search employee, department or job title...'}
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="custom-input ps-9 py-2 text-xs"
-          />
-        </div>
-      </div>
+      <div className="custom-card flex flex-col md:flex-row items-center gap-4 p-4">
+  <div className="relative w-full md:flex-1">
+    
+    <Search className="w-4 h-4 text-gray-400 absolute start-3 top-1/2 -translate-y-1/2" />
+
+    <input
+      type="text"
+      placeholder={t('searchLeads')}
+      value={searchTerm}
+      onChange={(e) => setSearchTerm(e.target.value)}
+      className="
+        w-full
+        h-10
+        rounded-xl
+        border
+        border-gray-200
+        bg-white
+        ps-10
+        pe-3
+        text-sm
+        placeholder:text-gray-400
+        focus:outline-none
+        focus:ring-4
+        focus:ring-red-500/20
+        focus:border-red-500
+        transition-all
+        duration-200
+      "
+    />
+  </div>
+</div>    
 
       {/* Employees Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
