@@ -22,7 +22,9 @@ import {
   ChevronRight,
   Settings,
   Cpu,
-  LogOut
+  LogOut,
+  PanelLeft,
+  PanelLeftClose
 } from 'lucide-react';
 
 export const Layout: React.FC = () => {
@@ -31,7 +33,22 @@ export const Layout: React.FC = () => {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState<boolean>(() => {
+    return localStorage.getItem('sidebar-collapsed') === 'true';
+  });
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+
+  const toggleSidebar = () => {
+    if (window.innerWidth < 768) {
+      setSidebarOpen(!sidebarOpen);
+    } else {
+      setIsCollapsed((prev) => {
+        const next = !prev;
+        localStorage.setItem('sidebar-collapsed', String(next));
+        return next;
+      });
+    }
+  };
 
   const { user } = useAppSelector((state) => state.auth);
   const { notifications } = useAppSelector((state) => state.notifications);
@@ -171,12 +188,18 @@ export const Layout: React.FC = () => {
       {/* Top Header */}
       <header className="sticky top-0 z-40 bg-white border-b border-gray-100 h-16 flex items-center justify-between px-4 sm:px-6 shadow-sm">
         <div className="flex items-center gap-3">
-          {/* Sidebar Toggle (Mobile) */}
+          {/* Sidebar Toggle (Universal) */}
           <button
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="md:hidden p-2 rounded-xl text-gray-600 hover:bg-gray-100 focus:outline-none"
+            onClick={toggleSidebar}
+            className="p-2 rounded-xl text-gray-600 hover:bg-red-50 hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-red-100 transition-all duration-200"
+            aria-label="Toggle Sidebar"
           >
-            <Menu className="w-6 h-6" />
+            <Menu className="md:hidden w-6 h-6" />
+            {isCollapsed ? (
+              <PanelLeft className="hidden md:block w-6 h-6" />
+            ) : (
+              <PanelLeftClose className="hidden md:block w-6 h-6" />
+            )}
           </button>
 
           {/* Top Navbar Logo & App Name */}
@@ -288,9 +311,9 @@ export const Layout: React.FC = () => {
       <div className="flex flex-1 relative">
         {/* Sidebar Navigation */}
         <aside
-          className={`fixed inset-y-0 start-0 z-30 w-64 bg-white border-e border-gray-100 pt-16 transform transition-transform duration-300 ease-in-out md:translate-x-0 md:sticky md:top-16 md:h-[calc(100vh-4rem)] ${
+          className={`fixed inset-y-0 start-0 z-30 bg-white border-e border-gray-100 pt-16 transform transition-all duration-300 ease-in-out md:translate-x-0 md:sticky md:top-16 md:h-[calc(100vh-4rem)] ${
             sidebarOpen ? 'translate-x-0' : '-translate-x-full rtl:translate-x-full md:rtl:translate-x-0'
-          }`}
+          } ${isCollapsed ? 'w-64 md:w-20' : 'w-64 md:w-[280px]'}`}
         >
           {/* Mobile close button */}
           <button
@@ -300,61 +323,167 @@ export const Layout: React.FC = () => {
             <X className="w-5 h-5" />
           </button>
 
-          <nav className="p-4 space-y-1 h-full overflow-y-auto pb-20">
-            {/* Sidebar Logo Header */}
-            
-
+          <nav className={`space-y-1 h-full overflow-y-auto pb-20 transition-all duration-300 ${isCollapsed ? 'p-2' : 'p-4'}`}>
             {navItems.map((item, idx) => {
+              const Icon = item.icon!;
+              const isParentActive = item.subItems 
+                ? item.subItems.some(sub => isActive(sub.path))
+                : isActive(item.path);
+
               if (item.subItems) {
+                // Has sub-items
                 return (
-                  <div key={idx} className="space-y-1">
-                    <div className="flex items-center gap-3 px-3.5 py-3 text-sm font-semibold rounded-xl text-gray-400 uppercase tracking-wider mt-4 first:mt-0">
-                      <item.icon className="w-4 h-4 text-gray-400" />
-                      <span>{item.label}</span>
+                  <div key={idx} className="relative group">
+                    {/* Desktop/Tablet view */}
+                    <div className="hidden md:block">
+                      {isCollapsed ? (
+                        <Link
+                          to={item.subItems[0].path}
+                          className={`flex items-center justify-center p-3 text-sm font-semibold rounded-xl transition-all duration-200 ${
+                            isParentActive
+                              ? 'bg-red-600 text-white shadow-sm shadow-red-100 font-bold'
+                              : 'text-gray-600 hover:bg-red-50 hover:text-red-600'
+                          }`}
+                        >
+                          <Icon className="w-5 h-5 shrink-0" />
+                          
+                          {/* Dropdown Tooltip on hover */}
+                          <div className="absolute start-[72px] top-0 z-50 hidden group-hover:flex flex-col bg-white border border-gray-100 shadow-xl rounded-2xl p-2 w-48 text-start">
+                            <div className="px-3 py-1.5 text-[10px] font-black text-gray-400 uppercase tracking-wider border-b border-gray-50 mb-1">
+                              {item.label}
+                            </div>
+                            {item.subItems.map((sub, subIdx) => {
+                              const active = isActive(sub.path);
+                              return (
+                                <Link
+                                  key={subIdx}
+                                  to={sub.path}
+                                  className={`px-3 py-2 text-xs font-bold rounded-xl transition-all ${
+                                    active
+                                      ? 'bg-red-600 text-white shadow-sm'
+                                      : 'text-gray-600 hover:bg-red-50 hover:text-red-600'
+                                  }`}
+                                >
+                                  {sub.label}
+                                </Link>
+                              );
+                            })}
+                          </div>
+                        </Link>
+                      ) : (
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-3 px-3.5 py-3 text-sm font-semibold rounded-xl text-gray-400 uppercase tracking-wider mt-4 first:mt-0">
+                            <Icon className="w-4 h-4 text-gray-400 shrink-0" />
+                            <span>{item.label}</span>
+                          </div>
+                          <div className="ps-4 space-y-1">
+                            {item.subItems.map((sub, subIdx) => {
+                              const active = isActive(sub.path);
+                              return (
+                                <Link
+                                  key={subIdx}
+                                  to={sub.path}
+                                  className={`flex items-center justify-between px-3.5 py-2.5 text-sm font-medium rounded-xl transition-all duration-200 ${
+                                    active
+                                      ? 'bg-red-600 text-white shadow-sm shadow-red-100 font-bold'
+                                      : 'text-gray-600 hover:bg-red-50 hover:text-red-600'
+                                  }`}
+                                >
+                                  <span>{sub.label}</span>
+                                  {active && <ChevronRight className="w-3.5 h-3.5 rtl:rotate-180" />}
+                                </Link>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
                     </div>
-                    <div className="ps-4 space-y-1">
-                      {item.subItems.map((sub, subIdx) => {
-                        const active = isActive(sub.path);
-                        return (
-                          <Link
-                            key={subIdx}
-                            to={sub.path}
-                            onClick={() => setSidebarOpen(false)}
-                            className={`flex items-center justify-between px-3.5 py-2.5 text-sm font-medium rounded-xl transition-all duration-200 ${
-                              active
-                                ? 'bg-red-600 text-white shadow-sm shadow-red-100 font-bold'
-                                : 'text-gray-600 hover:bg-red-50 hover:text-red-600'
-                            }`}
-                          >
-                            <span>{sub.label}</span>
-                            {active && <ChevronRight className="w-3.5 h-3.5 rtl:rotate-180" />}
-                          </Link>
-                        );
-                      })}
+
+                    {/* Mobile View (always expanded) */}
+                    <div className="md:hidden space-y-1">
+                      <div className="flex items-center gap-3 px-3.5 py-3 text-sm font-semibold rounded-xl text-gray-400 uppercase tracking-wider mt-4 first:mt-0">
+                        <Icon className="w-4 h-4 text-gray-400 shrink-0" />
+                        <span>{item.label}</span>
+                      </div>
+                      <div className="ps-4 space-y-1">
+                        {item.subItems.map((sub, subIdx) => {
+                          const active = isActive(sub.path);
+                          return (
+                            <Link
+                              key={subIdx}
+                              to={sub.path}
+                              onClick={() => setSidebarOpen(false)}
+                              className={`flex items-center justify-between px-3.5 py-2.5 text-sm font-medium rounded-xl transition-all duration-200 ${
+                                active
+                                  ? 'bg-red-600 text-white shadow-sm shadow-red-100 font-bold'
+                                  : 'text-gray-600 hover:bg-red-50 hover:text-red-600'
+                              }`}
+                            >
+                              <span>{sub.label}</span>
+                              {active && <ChevronRight className="w-3.5 h-3.5 rtl:rotate-180" />}
+                            </Link>
+                          );
+                        })}
+                      </div>
                     </div>
                   </div>
                 );
               }
 
-              const Icon = item.icon!;
-              const active = isActive(item.path);
+              // Without sub-items
               return (
-                <Link
-                  key={idx}
-                  to={item.path!}
-                  onClick={() => setSidebarOpen(false)}
-                  className={`flex items-center justify-between px-3.5 py-3 text-sm font-semibold rounded-xl transition-all duration-200 ${
-                    active
-                      ? 'bg-red-600 text-white shadow-sm shadow-red-100 font-bold'
-                      : 'text-gray-600 hover:bg-red-50 hover:text-red-600'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <Icon className="w-5 h-5" />
-                    <span>{item.label}</span>
+                <div key={idx} className="relative group">
+                  {/* Desktop/Tablet view */}
+                  <div className="hidden md:block">
+                    {isCollapsed ? (
+                      <Link
+                        to={item.path!}
+                        className={`flex items-center justify-center p-3 text-sm font-semibold rounded-xl transition-all duration-200 ${
+                          isParentActive
+                            ? 'bg-red-600 text-white shadow-sm shadow-red-100 font-bold'
+                            : 'text-gray-600 hover:bg-red-50 hover:text-red-600'
+                        }`}
+                      >
+                        <Icon className="w-5 h-5 shrink-0" />
+                        <div className="absolute start-[72px] top-1/2 -translate-y-1/2 z-50 hidden group-hover:block bg-gray-900 text-white text-[11px] font-bold py-1.5 px-3 rounded-lg whitespace-nowrap shadow-md">
+                          {item.label}
+                        </div>
+                      </Link>
+                    ) : (
+                      <Link
+                        to={item.path!}
+                        className={`flex items-center justify-between px-3.5 py-3 text-sm font-semibold rounded-xl transition-all duration-200 ${
+                          isParentActive
+                            ? 'bg-red-600 text-white shadow-sm shadow-red-100 font-bold'
+                            : 'text-gray-600 hover:bg-red-50 hover:text-red-600'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <Icon className="w-5 h-5 shrink-0" />
+                          <span>{item.label}</span>
+                        </div>
+                        {isParentActive && <ChevronRight className="w-4 h-4 rtl:rotate-180" />}
+                      </Link>
+                    )}
                   </div>
-                  {active && <ChevronRight className="w-4 h-4 rtl:rotate-180" />}
-                </Link>
+
+                  {/* Mobile view (always expanded) */}
+                  <Link
+                    to={item.path!}
+                    onClick={() => setSidebarOpen(false)}
+                    className={`md:hidden flex items-center justify-between px-3.5 py-3 text-sm font-semibold rounded-xl transition-all duration-200 ${
+                      isParentActive
+                        ? 'bg-red-600 text-white shadow-sm shadow-red-100 font-bold'
+                        : 'text-gray-600 hover:bg-red-50 hover:text-red-600'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <Icon className="w-5 h-5 shrink-0" />
+                      <span>{item.label}</span>
+                    </div>
+                    {isParentActive && <ChevronRight className="w-4 h-4 rtl:rotate-180" />}
+                  </Link>
+                </div>
               );
             })}
           </nav>
