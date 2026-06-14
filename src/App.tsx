@@ -1,4 +1,5 @@
 import { createBrowserRouter, RouterProvider, Navigate } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
 import { NotFound } from './pages/NotFound';
 import { Forbidden } from './pages/Forbidden';
 import { Layout } from './components/Layout';
@@ -24,6 +25,7 @@ import { Files } from './pages/Files';
 import { Notifications } from './pages/Notifications';
 import { Reports } from './pages/Reports';
 import { Settings } from './pages/Settings';
+import { SystemActivityLogs } from './pages/SystemActivityLogs';
 // import { Automations } from './pages/Automations';
 
 // Auth Pages
@@ -273,6 +275,14 @@ const router = createBrowserRouter([
           </ProtectedRoute>
         )
       },
+      {
+        path: '/ceo/activity-logs',
+        element: (
+          <ProtectedRoute requiredRole="CEO">
+            <SystemActivityLogs />
+          </ProtectedRoute>
+        )
+      },
       /*
       {
         path: '/automations',
@@ -304,7 +314,12 @@ const router = createBrowserRouter([
 ]);
 
 function App() {
-  return <RouterProvider router={router} />;
+  return (
+    <>
+      <RouterProvider router={router} />
+      <Toaster position="top-right" />
+    </>
+  );
 }
 
 export default App;

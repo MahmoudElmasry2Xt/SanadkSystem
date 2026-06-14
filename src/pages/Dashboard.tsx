@@ -4,6 +4,7 @@ import { useAppSelector } from '../store';
 import { useAppStore } from '../store/useAppStore';
 import { useLocation, Navigate } from 'react-router-dom';
 import { useDashboardStats } from '../hooks/useDashboardStats';
+import toast from 'react-hot-toast';
 import { KPICard } from '../components/KPICard';
 import {
   AreaChart,
@@ -220,7 +221,7 @@ export const Dashboard: React.FC = () => {
 
   // Quick Action Handlers
   const handleActionClick = (actionName: string) => {
-    alert(
+    toast.success(
       isRtl
         ? `تم تشغيل إجراء: ${actionName} (حالة التجربة)`
         : `Triggered quick action: ${actionName} (Demo Mode)`

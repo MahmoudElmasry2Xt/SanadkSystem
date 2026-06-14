@@ -23,7 +23,8 @@ import {
   Settings,
   LogOut,
   PanelLeft,
-  PanelLeftClose
+  PanelLeftClose,
+  Activity
 } from 'lucide-react';
 
 export const Layout: React.FC = () => {
@@ -170,6 +171,11 @@ export const Layout: React.FC = () => {
   // Settings (requires MANAGE_SETTINGS permission)
   if (user?.permissions.includes('MANAGE_SETTINGS')) {
     navItems.push({ path: '/settings', label: 'الإعدادات / Settings', icon: Settings });
+  }
+
+  // Activity Logs - CEO only
+  if (user?.role === 'CEO') {
+    navItems.push({ path: '/ceo/activity-logs', label: 'سجل النشاط / Activity Logs', icon: Activity });
   }
 
   const isActive = (path?: string, subItems?: { path: string }[]) => {

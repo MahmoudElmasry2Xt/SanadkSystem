@@ -107,6 +107,27 @@ export interface Campaign {
   clicks: number;
   leads: number;
   revenueGenerated: number;
+  description?: string;
+  notes?: string;
+}
+
+export interface LeadDeleteRequest {
+  id: string;
+  leadId: string;
+  leadName: string;
+  requestedBy: string;
+  reason: string;
+  status: 'Pending' | 'Approved' | 'Rejected';
+  timestamp: string;
+}
+
+export interface ActivityLog {
+  id: string;
+  actionType: string;
+  performedBy: string;
+  timestamp: string;
+  affectedEntity: 'lead' | 'campaign' | 'user' | 'attendance' | 'other';
+  details?: string;
 }
 
 export interface SystemFile {
@@ -155,12 +176,14 @@ interface AppState {
   files: SystemFile[];
   notifications: Notification[];
   chats: ChatSession[];
+  deleteRequests: LeadDeleteRequest[];
+  activityLogs: ActivityLog[];
   
   // Actions
   setRole: (role: UserRole) => void;
-  addLead: (lead: Omit<Lead, 'id' | 'dateCreated'>) => void;
-  updateLead: (lead: Lead) => void;
-  deleteLead: (id: string) => void;
+  addLead: (lead: Omit<Lead, 'id' | 'dateCreated'>, byUser?: string) => void;
+  updateLead: (lead: Lead, byUser?: string) => void;
+  deleteLead: (id: string, byUser?: string) => void;
   importLeads: (leads: Omit<Lead, 'id' | 'dateCreated'>[]) => void;
   addTask: (task: Omit<Task, 'id'>) => void;
   updateTask: (task: Task) => void;
@@ -175,8 +198,8 @@ interface AppState {
   addKpiTemplate: (template: KPITemplate) => void;
   updateKpiItemScore: (templateId: string, itemId: string, scores: Partial<Pick<KPIItem, 'selfScore' | 'managerScore' | 'finalScore'>>) => void;
   addFinancialRecord: (record: Omit<FinancialRecord, 'id'>) => void;
-  addCampaign: (campaign: Omit<Campaign, 'id' | 'reach' | 'clicks' | 'leads' | 'revenueGenerated'>) => void;
-  updateCampaign: (campaign: Campaign) => void;
+  addCampaign: (campaign: Omit<Campaign, 'id' | 'reach' | 'clicks' | 'leads' | 'revenueGenerated'>, byUser?: string) => void;
+  updateCampaign: (campaign: Campaign, byUser?: string) => void;
   addFile: (file: Omit<SystemFile, 'id' | 'uploadDate'>) => void;
   deleteFile: (id: string) => void;
   markNotificationRead: (id: string) => void;
@@ -184,6 +207,15 @@ interface AppState {
   sendChatMessage: (chatId: string, text: string) => void;
   assignLead: (leadId: string, agentName: string) => void;
   autoAssignLeads: (rule: 'workload' | 'performance' | 'location') => void;
+  
+  // Deletion requests actions
+  requestDeleteLead: (leadId: string, leadName: string, requestedBy: string, reason: string) => void;
+  cancelDeleteRequest: (requestId: string, byUser: string) => void;
+  approveDeleteRequest: (requestId: string, byUser: string) => void;
+  rejectDeleteRequest: (requestId: string, byUser: string) => void;
+  
+  // Logging action
+  addActivityLog: (actionType: string, performedBy: string, affectedEntity: 'lead' | 'campaign' | 'user' | 'attendance' | 'other', details?: string) => void;
 }
 
 // Initial Mock Data
@@ -338,6 +370,53 @@ const mockChats: ChatSession[] = [
   }
 ];
 
+const mockDeleteRequests: LeadDeleteRequest[] = [
+  {
+    id: 'req1',
+    leadId: '2',
+    leadName: 'سارة خالد محمود',
+    requestedBy: 'محمد حسن (Employee)',
+    reason: 'العميل مكرر وغير مهتم بالخدمات حالياً.',
+    status: 'Pending',
+    timestamp: '2026-06-14T11:30:00.000Z'
+  }
+];
+
+const mockActivityLogs: ActivityLog[] = [
+  {
+    id: 'log1',
+    actionType: 'Lead Created',
+    performedBy: 'محمد حسن (Employee)',
+    timestamp: '2026-06-14T09:00:00.000Z',
+    affectedEntity: 'lead',
+    details: 'تم إنشاء عميل جديد باسم: كريم نادر'
+  },
+  {
+    id: 'log2',
+    actionType: 'Attendance Check-in',
+    performedBy: 'محمود عبد السلام',
+    timestamp: '2026-06-14T09:05:00.000Z',
+    affectedEntity: 'attendance',
+    details: 'سجل حضور بالوقت المحدد'
+  },
+  {
+    id: 'log3',
+    actionType: 'Campaign Created',
+    performedBy: 'دينا الشافعي (Marketing)',
+    timestamp: '2026-06-14T10:15:00.000Z',
+    affectedEntity: 'campaign',
+    details: 'أطلقت حملة البحث وجوجل إعلانات Lead Gen'
+  },
+  {
+    id: 'log4',
+    actionType: 'Lead Delete Requested',
+    performedBy: 'محمد حسن (Employee)',
+    timestamp: '2026-06-14T11:30:00.000Z',
+    affectedEntity: 'lead',
+    details: 'طلب حذف العميل سارة خالد محمود. السبب: العميل مكرر وغير مهتم بالخدمات حالياً.'
+  }
+];
+
 export const useAppStore = create<AppState>((set) => ({
   currentRole: 'CEO',
   leads: mockLeads,
@@ -349,27 +428,65 @@ export const useAppStore = create<AppState>((set) => ({
   files: mockFiles,
   notifications: mockNotifications,
   chats: mockChats,
+  deleteRequests: mockDeleteRequests,
+  activityLogs: mockActivityLogs,
   
   setRole: (role) => set({ currentRole: role }),
   
-  addLead: (lead) => set((state) => ({
-    leads: [
-      {
-        ...lead,
-        id: (state.leads.length + 1).toString(),
-        dateCreated: new Date().toISOString().split('T')[0]
-      },
-      ...state.leads
-    ]
-  })),
+  addLead: (lead, byUser) => set((state) => {
+    const newLead = {
+      ...lead,
+      id: (state.leads.length + 1).toString(),
+      dateCreated: new Date().toISOString().split('T')[0]
+    };
+    const user = byUser || (state.currentRole === 'CEO' ? 'أحمد علي (CEO)' : 'محمد حسن (Employee)');
+    const newLog: ActivityLog = {
+      id: 'log-' + (state.activityLogs.length + 1) + '-' + Math.random().toString(36).substr(2, 4),
+      actionType: 'Lead Created',
+      performedBy: user,
+      timestamp: new Date().toISOString(),
+      affectedEntity: 'lead',
+      details: `تم إنشاء عميل محتمل جديد باسم: ${lead.name}`
+    };
+    return {
+      leads: [newLead, ...state.leads],
+      activityLogs: [newLog, ...state.activityLogs]
+    };
+  }),
   
-  updateLead: (updatedLead) => set((state) => ({
-    leads: state.leads.map((l) => l.id === updatedLead.id ? updatedLead : l)
-  })),
+  updateLead: (updatedLead, byUser) => set((state) => {
+    const user = byUser || (state.currentRole === 'CEO' ? 'أحمد علي (CEO)' : 'محمد حسن (Employee)');
+    const newLog: ActivityLog = {
+      id: 'log-' + (state.activityLogs.length + 1) + '-' + Math.random().toString(36).substr(2, 4),
+      actionType: 'Lead Updated',
+      performedBy: user,
+      timestamp: new Date().toISOString(),
+      affectedEntity: 'lead',
+      details: `تم تحديث بيانات العميل: ${updatedLead.name}`
+    };
+    return {
+      leads: state.leads.map((l) => l.id === updatedLead.id ? updatedLead : l),
+      activityLogs: [newLog, ...state.activityLogs]
+    };
+  }),
   
-  deleteLead: (id) => set((state) => ({
-    leads: state.leads.filter((l) => l.id !== id)
-  })),
+  deleteLead: (id, byUser) => set((state) => {
+    const lead = state.leads.find(l => l.id === id);
+    const leadName = lead ? lead.name : id;
+    const user = byUser || (state.currentRole === 'CEO' ? 'أحمد علي (CEO)' : 'محمد حسن (Employee)');
+    const newLog: ActivityLog = {
+      id: 'log-' + (state.activityLogs.length + 1) + '-' + Math.random().toString(36).substr(2, 4),
+      actionType: 'Lead Deleted',
+      performedBy: user,
+      timestamp: new Date().toISOString(),
+      affectedEntity: 'lead',
+      details: `تم حذف العميل: ${leadName}`
+    };
+    return {
+      leads: state.leads.filter((l) => l.id !== id),
+      activityLogs: [newLog, ...state.activityLogs]
+    };
+  }),
   
   importLeads: (newLeads) => set((state) => {
     const startId = state.leads.length + 1;
@@ -478,7 +595,7 @@ export const useAppStore = create<AppState>((set) => ({
       let delayMinutes = checkInMinutesTotal - startMinutesTotal;
       if (delayMinutes < 0) delayMinutes = 0;
 
-      let status: 'Present' | 'Late' | 'Absent' = 'Present';
+      let status: 'Present' | 'Late' | 'Absent';
 
       if (checkInMinutesTotal > cutoffMinutesTotal) {
         status = 'Absent';
@@ -506,6 +623,15 @@ export const useAppStore = create<AppState>((set) => ({
             : 'Checked in too late! Status: Absent.'
       };
 
+      const newLog: ActivityLog = {
+        id: 'log-' + (state.activityLogs.length + 1) + '-' + Math.random().toString(36).substr(2, 4),
+        actionType: 'Attendance Check-in',
+        performedBy: employee.name,
+        timestamp: new Date().toISOString(),
+        affectedEntity: 'attendance',
+        details: `تسجيل حضور للموظف: ${employee.name}. الحالة: ${status === 'Present' ? 'حاضر' : status === 'Late' ? 'متأخر' : 'غائب'}`
+      };
+
       return {
         employees: state.employees.map((e) => {
           if (e.id === empId) {
@@ -515,7 +641,8 @@ export const useAppStore = create<AppState>((set) => ({
             };
           }
           return e;
-        })
+        }),
+        activityLogs: [newLog, ...state.activityLogs]
       };
     });
 
@@ -568,6 +695,15 @@ export const useAppStore = create<AppState>((set) => ({
 
       result = { success: true, message: `Checked out successfully! Total Hours: ${workHours}` };
 
+      const newLog: ActivityLog = {
+        id: 'log-' + (state.activityLogs.length + 1) + '-' + Math.random().toString(36).substr(2, 4),
+        actionType: 'Attendance Check-out',
+        performedBy: employee.name,
+        timestamp: new Date().toISOString(),
+        affectedEntity: 'attendance',
+        details: `تسجيل انصراف للموظف: ${employee.name}. عدد ساعات العمل: ${workHours}`
+      };
+
       return {
         employees: state.employees.map((e) => {
           if (e.id === empId) {
@@ -579,7 +715,8 @@ export const useAppStore = create<AppState>((set) => ({
             };
           }
           return e;
-        })
+        }),
+        activityLogs: [newLog, ...state.activityLogs]
       };
     });
 
@@ -645,23 +782,45 @@ export const useAppStore = create<AppState>((set) => ({
     ]
   })),
   
-  addCampaign: (campaign) => set((state) => ({
-    campaigns: [
-      {
-        ...campaign,
-        id: 'c' + (state.campaigns.length + 1),
-        reach: Math.floor(Math.random() * 5000) + 100,
-        clicks: Math.floor(Math.random() * 500) + 10,
-        leads: Math.floor(Math.random() * 20),
-        revenueGenerated: 0
-      },
-      ...state.campaigns
-    ]
-  })),
+  addCampaign: (campaign, byUser) => set((state) => {
+    const newCampaign: Campaign = {
+      ...campaign,
+      id: 'c' + (state.campaigns.length + 1),
+      reach: Math.floor(Math.random() * 5000) + 100,
+      clicks: Math.floor(Math.random() * 500) + 10,
+      leads: Math.floor(Math.random() * 20),
+      revenueGenerated: 0
+    };
+    const user = byUser || (state.currentRole === 'CEO' ? 'أحمد علي (CEO)' : 'محمد حسن (Employee)');
+    const newLog: ActivityLog = {
+      id: 'log-' + (state.activityLogs.length + 1) + '-' + Math.random().toString(36).substr(2, 4),
+      actionType: 'Campaign Created',
+      performedBy: user,
+      timestamp: new Date().toISOString(),
+      affectedEntity: 'campaign',
+      details: `تم إطلاق حملة تسويقية جديدة: ${campaign.name} ميزانية: ${campaign.budget} ج.م`
+    };
+    return {
+      campaigns: [newCampaign, ...state.campaigns],
+      activityLogs: [newLog, ...state.activityLogs]
+    };
+  }),
   
-  updateCampaign: (updatedCampaign) => set((state) => ({
-    campaigns: state.campaigns.map((c) => c.id === updatedCampaign.id ? updatedCampaign : c)
-  })),
+  updateCampaign: (updatedCampaign, byUser) => set((state) => {
+    const user = byUser || (state.currentRole === 'CEO' ? 'أحمد علي (CEO)' : 'محمد حسن (Employee)');
+    const newLog: ActivityLog = {
+      id: 'log-' + (state.activityLogs.length + 1) + '-' + Math.random().toString(36).substr(2, 4),
+      actionType: 'Campaign Updated',
+      performedBy: user,
+      timestamp: new Date().toISOString(),
+      affectedEntity: 'campaign',
+      details: `تم تحديث الحملة التسويقية: ${updatedCampaign.name}، الحالة: ${updatedCampaign.status}`
+    };
+    return {
+      campaigns: state.campaigns.map((c) => c.id === updatedCampaign.id ? updatedCampaign : c),
+      activityLogs: [newLog, ...state.activityLogs]
+    };
+  }),
   
   addFile: (file) => set((state) => ({
     files: [
@@ -684,6 +843,96 @@ export const useAppStore = create<AppState>((set) => ({
   
   markAllNotificationsRead: () => set((state) => ({
     notifications: state.notifications.map((n) => ({ ...n, read: true }))
+  })),
+
+  requestDeleteLead: (leadId, leadName, requestedBy, reason) => set((state) => {
+    const newReq: LeadDeleteRequest = {
+      id: 'req-' + (state.deleteRequests.length + 1) + '-' + Math.random().toString(36).substr(2, 4),
+      leadId,
+      leadName,
+      requestedBy,
+      reason,
+      status: 'Pending',
+      timestamp: new Date().toISOString()
+    };
+    const newLog: ActivityLog = {
+      id: 'log-' + (state.activityLogs.length + 1) + '-' + Math.random().toString(36).substr(2, 4),
+      actionType: 'Lead Delete Requested',
+      performedBy: requestedBy,
+      timestamp: new Date().toISOString(),
+      affectedEntity: 'lead',
+      details: `طلب حذف العميل "${leadName}". السبب: ${reason}`
+    };
+    return {
+      deleteRequests: [newReq, ...state.deleteRequests],
+      activityLogs: [newLog, ...state.activityLogs]
+    };
+  }),
+
+  cancelDeleteRequest: (requestId, byUser) => set((state) => {
+    const req = state.deleteRequests.find(r => r.id === requestId);
+    if (!req) return {};
+    const newLog: ActivityLog = {
+      id: 'log-' + (state.activityLogs.length + 1) + '-' + Math.random().toString(36).substr(2, 4),
+      actionType: 'Lead Delete Request Cancelled',
+      performedBy: byUser,
+      timestamp: new Date().toISOString(),
+      affectedEntity: 'lead',
+      details: `تم إلغاء طلب حذف العميل: "${req.leadName}"`
+    };
+    return {
+      deleteRequests: state.deleteRequests.filter(r => r.id !== requestId),
+      activityLogs: [newLog, ...state.activityLogs]
+    };
+  }),
+
+  approveDeleteRequest: (requestId, byUser) => set((state) => {
+    const req = state.deleteRequests.find(r => r.id === requestId);
+    if (!req) return {};
+    const newLog: ActivityLog = {
+      id: 'log-' + (state.activityLogs.length + 1) + '-' + Math.random().toString(36).substr(2, 4),
+      actionType: 'Lead Delete Approved',
+      performedBy: byUser,
+      timestamp: new Date().toISOString(),
+      affectedEntity: 'lead',
+      details: `تمت الموافقة على حذف العميل: "${req.leadName}"`
+    };
+    return {
+      leads: state.leads.filter(l => l.id !== req.leadId),
+      deleteRequests: state.deleteRequests.map(r => r.id === requestId ? { ...r, status: 'Approved' } : r),
+      activityLogs: [newLog, ...state.activityLogs]
+    };
+  }),
+
+  rejectDeleteRequest: (requestId, byUser) => set((state) => {
+    const req = state.deleteRequests.find(r => r.id === requestId);
+    if (!req) return {};
+    const newLog: ActivityLog = {
+      id: 'log-' + (state.activityLogs.length + 1) + '-' + Math.random().toString(36).substr(2, 4),
+      actionType: 'Lead Delete Rejected',
+      performedBy: byUser,
+      timestamp: new Date().toISOString(),
+      affectedEntity: 'lead',
+      details: `تم رفض حذف العميل: "${req.leadName}"`
+    };
+    return {
+      deleteRequests: state.deleteRequests.map(r => r.id === requestId ? { ...r, status: 'Rejected' } : r),
+      activityLogs: [newLog, ...state.activityLogs]
+    };
+  }),
+
+  addActivityLog: (actionType, performedBy, affectedEntity, details) => set((state) => ({
+    activityLogs: [
+      {
+        id: 'log-' + (state.activityLogs.length + 1) + '-' + Math.random().toString(36).substr(2, 4),
+        actionType,
+        performedBy,
+        timestamp: new Date().toISOString(),
+        affectedEntity,
+        details
+      },
+      ...state.activityLogs
+    ]
   })),
   
   sendChatMessage: (chatId, text) => set((state) => ({

@@ -12,6 +12,8 @@ export interface Campaign {
   clicks: number;
   leads: number;
   revenueGenerated: number;
+  description?: string;
+  notes?: string;
 }
 
 interface MarketingState {

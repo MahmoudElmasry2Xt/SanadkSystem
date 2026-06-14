@@ -1,13 +1,16 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAppStore, type Campaign } from '../store/useAppStore';
-import { Plus, X, Play, Pause } from 'lucide-react';
+import { useAppSelector } from '../store';
+import { Plus, X, Play, Pause, Edit2 } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 export const MarketingCampaigns: React.FC = () => {
   const { t, i18n } = useTranslation();
   const isRtl = i18n.language === 'ar';
-  
+
   const { campaigns, addCampaign, updateCampaign, employees } = useAppStore();
+  const { user } = useAppSelector((state) => state.auth);
 
   const [formOpen, setFormOpen] = useState(false);
   const [formData, setFormData] = useState({
@@ -19,9 +22,59 @@ export const MarketingCampaigns: React.FC = () => {
     status: 'Active' as Campaign['status']
   });
 
+  // Edit modal state
+  const [editOpen, setEditOpen] = useState(false);
+  const [editingCampaign, setEditingCampaign] = useState<Campaign | null>(null);
+  const [editData, setEditData] = useState({
+    name: '',
+    budget: 1000,
+    platform: 'Facebook' as Campaign['platform'],
+    goal: '',
+    assignee: '',
+    status: 'Active' as Campaign['status'],
+    description: '',
+    notes: ''
+  });
+
+  const canEditCampaign = (campaign: Campaign) => {
+    if (!user) return false;
+    const adminRoles = ['CEO', 'General Manager', 'Marketing Manager'];
+    if (adminRoles.includes(user.role)) return true;
+    // Owner can edit their own campaign
+    return campaign.assignee === user.name;
+  };
+
+  const openEditModal = (camp: Campaign) => {
+    setEditingCampaign(camp);
+    setEditData({
+      name: camp.name,
+      budget: camp.budget,
+      platform: camp.platform,
+      goal: camp.goal,
+      assignee: camp.assignee,
+      status: camp.status,
+      description: camp.description || '',
+      notes: camp.notes || ''
+    });
+    setEditOpen(true);
+  };
+
+  const handleEditSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingCampaign) return;
+    updateCampaign({
+      ...editingCampaign,
+      ...editData
+    });
+    toast.success(isRtl ? 'تم تحديث الحملة بنجاح' : 'Campaign updated successfully');
+    setEditOpen(false);
+    setEditingCampaign(null);
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     addCampaign(formData);
+    toast.success(isRtl ? 'تم إطلاق الحملة بنجاح' : 'Campaign launched successfully');
     setFormOpen(false);
     setFormData({
       name: '',
@@ -37,11 +90,12 @@ export const MarketingCampaigns: React.FC = () => {
     const nextStatus: Campaign['status'] =
       campaign.status === 'Active' ? 'Paused' :
       campaign.status === 'Paused' ? 'Active' : 'Completed';
-    
+
     updateCampaign({
       ...campaign,
       status: nextStatus
     });
+    toast.success(isRtl ? 'تم تحديث حالة الحملة' : 'Campaign status updated');
   };
 
   const getStatusBadge = (status: Campaign['status']) => {
@@ -102,7 +156,12 @@ export const MarketingCampaigns: React.FC = () => {
             <tbody className="divide-y divide-gray-50">
               {campaigns.map((camp) => (
                 <tr key={camp.id} className="hover:bg-gray-50/50 transition-colors">
-                  <td className="p-4 font-bold text-gray-900">{camp.name}</td>
+                  <td className="p-4 font-bold text-gray-900">
+                    {camp.name}
+                    {camp.description && (
+                      <span className="block text-[10px] text-gray-400 font-normal mt-0.5 truncate max-w-[160px]">{camp.description}</span>
+                    )}
+                  </td>
                   <td className="p-4 text-gray-600 font-medium">{camp.platform}</td>
                   <td className="p-4 font-mono font-bold text-gray-900">{camp.budget.toLocaleString()} ج.م</td>
                   <td className="p-4 text-gray-500">{camp.goal}</td>
@@ -114,6 +173,15 @@ export const MarketingCampaigns: React.FC = () => {
                   </td>
                   <td className="p-4">
                     <div className="flex items-center justify-center gap-1.5">
+                      {canEditCampaign(camp) && (
+                        <button
+                          onClick={() => openEditModal(camp)}
+                          className="p-1 rounded-xl text-gray-400 hover:bg-red-50 hover:text-red-600 border border-gray-100 transition-colors"
+                          title={isRtl ? 'تعديل الحملة' : 'Edit Campaign'}
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
                       <button
                         onClick={() => toggleCampaignStatus(camp)}
                         className="p-1 rounded-xl text-gray-400 hover:bg-red-50 hover:text-red-600 border border-gray-100 transition-colors"
@@ -125,10 +193,152 @@ export const MarketingCampaigns: React.FC = () => {
                   </td>
                 </tr>
               ))}
+              {campaigns.length === 0 && (
+                <tr>
+                  <td colSpan={7} className="p-12 text-center text-gray-400 text-xs">
+                    {isRtl ? 'لا توجد حملات إعلانية حتى الآن.' : 'No campaigns yet. Create one to get started.'}
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
       </div>
+
+      {/* Edit Campaign Modal */}
+      {editOpen && editingCampaign && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm" onClick={() => setEditOpen(false)} />
+          <form
+            onSubmit={handleEditSubmit}
+            className="bg-white rounded-2xl w-full max-w-lg p-6 z-10 shadow-2xl relative border border-gray-100 overflow-y-auto max-h-[90vh]"
+          >
+            <button
+              type="button"
+              onClick={() => setEditOpen(false)}
+              className="absolute top-4 end-4 p-1 rounded-xl text-gray-400 hover:bg-gray-100"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            <h3 className="font-black text-gray-900 text-sm mb-6">
+              {isRtl ? 'تعديل الحملة الإعلانية' : 'Edit Campaign'}
+            </h3>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-gray-500 mb-1.5">{isRtl ? 'اسم الحملة' : 'Campaign Name'}</label>
+                <input
+                  type="text"
+                  required
+                  value={editData.name}
+                  onChange={(e) => setEditData({ ...editData, name: e.target.value })}
+                  className="custom-input text-xs"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 mb-1.5">{isRtl ? 'المنصة' : 'Platform'}</label>
+                  <select
+                    value={editData.platform}
+                    onChange={(e) => setEditData({ ...editData, platform: e.target.value as Campaign['platform'] })}
+                    className="custom-input text-xs"
+                  >
+                    <option value="Facebook">Facebook</option>
+                    <option value="Google Ads">Google Ads</option>
+                    <option value="TikTok">TikTok</option>
+                    <option value="Snapchat">Snapchat</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 mb-1.5">{t('budget')}</label>
+                  <input
+                    type="number"
+                    required
+                    value={editData.budget}
+                    onChange={(e) => setEditData({ ...editData, budget: parseInt(e.target.value) || 0 })}
+                    className="custom-input text-xs font-mono"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 mb-1.5">{isRtl ? 'الهدف الرئيسي' : 'Goal'}</label>
+                  <input
+                    type="text"
+                    required
+                    value={editData.goal}
+                    onChange={(e) => setEditData({ ...editData, goal: e.target.value })}
+                    className="custom-input text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 mb-1.5">{t('assignee')}</label>
+                  <select
+                    value={editData.assignee}
+                    onChange={(e) => setEditData({ ...editData, assignee: e.target.value })}
+                    className="custom-input text-xs"
+                  >
+                    {employees.map(emp => (
+                      <option key={emp.id} value={emp.name}>{emp.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-500 mb-1.5">{t('status')}</label>
+                <select
+                  value={editData.status}
+                  onChange={(e) => setEditData({ ...editData, status: e.target.value as Campaign['status'] })}
+                  className="custom-input text-xs"
+                >
+                  <option value="Active">Active</option>
+                  <option value="Paused">Paused</option>
+                  <option value="Completed">Completed</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-500 mb-1.5">{isRtl ? 'وصف الحملة' : 'Description'}</label>
+                <textarea
+                  value={editData.description}
+                  onChange={(e) => setEditData({ ...editData, description: e.target.value })}
+                  rows={2}
+                  className="custom-input text-xs"
+                  placeholder={isRtl ? 'وصف مختصر...' : 'Brief description...'}
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-500 mb-1.5">{t('notes')}</label>
+                <textarea
+                  value={editData.notes}
+                  onChange={(e) => setEditData({ ...editData, notes: e.target.value })}
+                  rows={2}
+                  className="custom-input text-xs"
+                  placeholder={isRtl ? 'ملاحظات إضافية...' : 'Additional notes...'}
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-2.5 mt-6">
+              <button type="submit" className="flex-1 custom-btn-primary py-2.5 text-xs">
+                {t('save')}
+              </button>
+              <button
+                type="button"
+                onClick={() => setEditOpen(false)}
+                className="flex-1 custom-btn-secondary py-2.5 text-xs"
+              >
+                {t('cancel')}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
 
       {/* Add Campaign Modal */}
       {formOpen && (
@@ -145,7 +355,7 @@ export const MarketingCampaigns: React.FC = () => {
             >
               <X className="w-4 h-4" />
             </button>
-            
+
             <h3 className="font-black text-gray-900 text-sm mb-6">{isRtl ? 'إطلاق حملة إعلانية جديدة' : 'Launch New Campaign'}</h3>
 
             <div className="space-y-4">
@@ -166,7 +376,7 @@ export const MarketingCampaigns: React.FC = () => {
                   <label className="block text-xs font-bold text-gray-500 mb-1.5">{isRtl ? 'المنصة' : 'Platform'}</label>
                   <select
                     value={formData.platform}
-                    onChange={(e) => setFormData({ ...formData, platform: e.target.value as any })}
+                    onChange={(e) => setFormData({ ...formData, platform: e.target.value as Campaign['platform'] })}
                     className="custom-input text-xs"
                   >
                     <option value="Facebook">Facebook</option>

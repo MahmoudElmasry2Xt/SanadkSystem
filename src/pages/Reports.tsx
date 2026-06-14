@@ -3,6 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { useAppStore } from '../store/useAppStore';
 import { FileText, Download, BarChart2, CheckCircle2, UserCheck, DollarSign } from 'lucide-react';
 
+import toast from 'react-hot-toast';
+
 export const Reports: React.FC = () => {
   const { t, i18n } = useTranslation();
   const isRtl = i18n.language === 'ar';
@@ -12,7 +14,7 @@ export const Reports: React.FC = () => {
   const [selectedReport, setSelectedReport] = useState<'crm' | 'marketing' | 'tasks' | 'finance'>('crm');
 
   const handleExport = () => {
-    alert(isRtl ? 'تم تصدير التقرير بنجاح بصيغة PDF / Excel!' : 'Report exported successfully to PDF / Excel!');
+    toast.success(isRtl ? 'تم تصدير التقرير بنجاح بصيغة PDF / Excel!' : 'Report exported successfully to PDF / Excel!');
   };
 
   return (

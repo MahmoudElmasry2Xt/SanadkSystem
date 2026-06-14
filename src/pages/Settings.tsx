@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAppDispatch, useAppSelector } from '../store';
+import toast from 'react-hot-toast';
 import {
   addDepartment,
   updateDepartment,
@@ -96,9 +97,8 @@ export const Settings: React.FC = () => {
   };
 
   const handleDeleteDept = (id: string) => {
-    if (window.confirm(isRtl ? 'هل أنت متأكد من حذف هذا القسم؟' : 'Are you sure you want to delete this department?')) {
-      dispatch(deleteDepartment(id));
-    }
+    dispatch(deleteDepartment(id));
+    toast.success(isRtl ? 'تم حذف القسم بنجاح!' : 'Department deleted successfully!');
   };
 
   // Position Action Handlers
@@ -141,9 +141,8 @@ export const Settings: React.FC = () => {
   };
 
   const handleDeletePos = (id: string) => {
-    if (window.confirm(isRtl ? 'هل أنت متأكد من حذف هذه الوظيفة؟' : 'Are you sure you want to delete this position?')) {
-      dispatch(deletePosition(id));
-    }
+    dispatch(deletePosition(id));
+    toast.success(isRtl ? 'تم حذف الوظيفة بنجاح!' : 'Position deleted successfully!');
   };
 
   return (

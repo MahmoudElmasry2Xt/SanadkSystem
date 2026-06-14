@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAppDispatch, useAppSelector } from '../store';
 import { toggleAutomationActive, addAutomationRule } from '../store/settingsSlice';
+import toast from 'react-hot-toast';
 import {
   Box,
   Typography,
@@ -36,6 +37,7 @@ export const Automations: React.FC = () => {
 
   const handleToggle = (id: string) => {
     dispatch(toggleAutomationActive(id));
+    toast.success(isRtl ? 'تم تغيير حالة القاعدة التلقائية!' : 'Automation rule status toggled!');
   };
 
   const handleOpenDialog = () => {
@@ -59,6 +61,7 @@ export const Automations: React.FC = () => {
         active: true
       })
     );
+    toast.success(isRtl ? 'تم إنشاء قاعدة الأتمتة بنجاح!' : 'Automation rule added successfully!');
     setDialogOpen(false);
   };
 
@@ -174,7 +177,7 @@ export const Automations: React.FC = () => {
                   color="inherit"
                   startIcon={<Play size={12} />}
                   sx={{ borderRadius: 2, textTransform: 'none', px: 2 }}
-                  onClick={() => alert(isRtl ? 'تم تشغيل القاعدة بنجاح!' : 'Rule triggered manually!')}
+                  onClick={() => toast.success(isRtl ? 'تم تشغيل القاعدة بنجاح!' : 'Rule triggered manually!')}
                 >
                   {isRtl ? 'تشغيل الآن' : 'Run Now'}
                 </Button>

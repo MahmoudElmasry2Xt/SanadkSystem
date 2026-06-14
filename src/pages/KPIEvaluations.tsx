@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAppStore } from '../store/useAppStore';
 import { Star, User, UserCheck } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 export const KPIEvaluations: React.FC = () => {
   const { t, i18n } = useTranslation();
@@ -51,7 +52,7 @@ export const KPIEvaluations: React.FC = () => {
       }
     });
 
-    alert(isRtl ? 'تم حفظ وحساب درجات التقييم بنجاح!' : 'Evaluations scores updated successfully!');
+    toast.success(isRtl ? 'تم حفظ وحساب درجات التقييم بنجاح!' : 'Evaluations scores updated successfully!');
   };
 
   // Calculate overall rating sum

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useAppStore, type Lead } from '../store/useAppStore';
 import { useAppSelector } from '../store';
 import { Link } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import {
   Search,
   Plus,
@@ -11,22 +12,45 @@ import {
   Edit2,
   Trash2,
   X,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Check,
+  AlertTriangle,
+  XCircle,
+  Clock
 } from 'lucide-react';
-
 
 export const CRMLeads: React.FC = () => {
   const { t, i18n } = useTranslation();
   const isRtl = i18n.language === 'ar';
-  
-  const { leads, addLead, updateLead, deleteLead, importLeads, assignLead, autoAssignLeads } = useAppStore();
+
+  const {
+    leads,
+    addLead,
+    updateLead,
+    deleteLead,
+    importLeads,
+    assignLead,
+    autoAssignLeads,
+    deleteRequests,
+    requestDeleteLead,
+    cancelDeleteRequest,
+    approveDeleteRequest,
+    rejectDeleteRequest
+  } = useAppStore();
+
   const { user } = useAppSelector((state) => state.auth);
 
-  // Search & Filter State
+  // Filter State
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSource, setSelectedSource] = useState('');
   const [selectedGov, setSelectedGov] = useState('');
-  
+
+  // Delete Request Modal State
+  const [deleteRequestModalOpen, setDeleteRequestModalOpen] = useState(false);
+  const [leadToDelete, setLeadToDelete] = useState<Lead | null>(null);
+  const [deleteReason, setDeleteReason] = useState('');
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+
   // Modal State
   const [modalOpen, setModalOpen] = useState(false);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
@@ -143,7 +167,7 @@ export const CRMLeads: React.FC = () => {
             <select
               onChange={(e) => {
                 if (e.target.value) {
-                  autoAssignLeads(e.target.value as any);
+                  autoAssignLeads(e.target.value as 'workload' | 'performance' | 'location');
                   e.target.value = '';
                 }
               }}
@@ -227,6 +251,62 @@ export const CRMLeads: React.FC = () => {
         </div>
       </div>
 
+      {/* Admin Deletion Approval Panel */}
+      {['CEO', 'Sales Manager', 'General Manager'].includes(user?.role || '') && (deleteRequests?.filter(r => r.status === 'Pending').length || 0) > 0 && (
+        <div className="bg-gradient-to-r from-amber-50 to-orange-50/30 rounded-2xl border border-amber-100 p-5 shadow-sm space-y-4">
+          <div className="flex items-center gap-2 pb-2 border-b border-amber-200/50">
+            <AlertTriangle className="w-5 h-5 text-amber-600 animate-pulse" />
+            <div>
+              <h3 className="font-extrabold text-sm text-gray-950">{isRtl ? 'طلبات حذف قيد المراجعة' : 'Pending Deletion Requests'}</h3>
+              <p className="text-[10px] text-gray-500 mt-0.5">
+                {isRtl ? 'يجب مراجعة أسباب الحذف المدخلة من الموظفين والموافقة عليها أو رفضها.' : 'Review reasons submitted by sales agents to approve or reject deletion requests.'}
+              </p>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {deleteRequests.filter(r => r.status === 'Pending').map((req) => (
+              <div key={req.id} className="bg-white rounded-xl border border-amber-100 p-4 shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
+                <div className="space-y-2">
+                  <div className="flex justify-between items-start">
+                    <span className="font-extrabold text-xs text-gray-900">{req.leadName}</span>
+                    <span className="text-[9px] text-gray-400 font-mono">
+                      {new Date(req.timestamp).toLocaleDateString()}
+                    </span>
+                  </div>
+                  <div className="text-[11px] text-gray-600 bg-gray-50 p-2 rounded-lg leading-relaxed">
+                    <span className="font-bold block text-[9px] text-gray-400 mb-0.5">{isRtl ? 'سبب الحذف:' : 'Reason:'}</span>
+                    "{req.reason}"
+                  </div>
+                  <div className="text-[10px] text-gray-400">
+                    {isRtl ? 'بواسطة:' : 'Requested by:'} <span className="font-bold text-gray-700">{req.requestedBy}</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 mt-4 pt-3 border-t border-gray-50">
+                  <button
+                    onClick={() => {
+                      approveDeleteRequest(req.id, user?.name || user?.email || 'Admin');
+                    }}
+                    className="flex-1 py-1.5 px-3 rounded-lg bg-green-600 hover:bg-green-700 text-white font-bold text-[10px] flex items-center justify-center gap-1 transition-all"
+                  >
+                    <Check className="w-3 h-3" />
+                    <span>{isRtl ? 'موافقة' : 'Approve'}</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      rejectDeleteRequest(req.id, user?.name || user?.email || 'Admin');
+                    }}
+                    className="flex-1 py-1.5 px-3 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 border border-red-100 font-bold text-[10px] flex items-center justify-center gap-1 transition-all"
+                  >
+                    <X className="w-3 h-3" />
+                    <span>{isRtl ? 'رفض' : 'Reject'}</span>
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Leads Table */}
       <div className="custom-card overflow-hidden p-0">
         <div className="overflow-x-auto">
@@ -251,6 +331,18 @@ export const CRMLeads: React.FC = () => {
                       {lead.name}
                     </Link>
                     <span className="block text-[10px] text-gray-400 font-normal mt-0.5">{lead.jobTitle}</span>
+                    {(() => {
+                      const pendingReq = deleteRequests?.find(r => r.leadId === lead.id && r.status === 'Pending');
+                      if (pendingReq) {
+                        return (
+                          <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-700 text-[9px] px-1.5 py-0.5 rounded-md font-bold mt-1 shadow-sm border border-amber-100">
+                            <Clock className="w-2.5 h-2.5" />
+                            <span>{isRtl ? 'قيد انتظار الحذف' : 'Pending Delete'}</span>
+                          </span>
+                        );
+                      }
+                      return null;
+                    })()}
                   </td>
                   <td className="p-4 text-gray-600 font-medium">{lead.company}</td>
                   <td className="p-4 text-gray-600 font-mono">{lead.phone}</td>
@@ -302,13 +394,57 @@ export const CRMLeads: React.FC = () => {
                       >
                         <Edit2 className="w-4 h-4" />
                       </button>
-                      <button
-                        onClick={() => deleteLead(lead.id)}
-                        className="p-1 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors"
-                        title={t('delete')}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      {(() => {
+                        const pendingReq = deleteRequests?.find(r => r.leadId === lead.id && r.status === 'Pending');
+                        if (pendingReq) {
+                          return (
+                            <button
+                              onClick={() => {
+                                cancelDeleteRequest(pendingReq.id, user?.name || user?.email || 'User');
+                                toast.success(isRtl ? 'تم إلغاء طلب حذف العميل' : 'Delete request cancelled successfully');
+                              }}
+                              className="p-1 text-amber-500 hover:text-red-600 rounded-lg hover:bg-amber-50 transition-colors animate-pulse"
+                              title={isRtl ? 'إلغاء طلب الحذف' : 'Cancel Delete Request'}
+                            >
+                              <XCircle className="w-4 h-4" />
+                            </button>
+                          );
+                        }
+                        if (confirmDeleteId === lead.id) {
+                          return (
+                            <button
+                              onClick={() => {
+                                deleteLead(lead.id, user?.name || user?.email || 'Admin');
+                                toast.success(isRtl ? 'تم حذف العميل بنجاح' : 'Lead deleted successfully');
+                                setConfirmDeleteId(null);
+                              }}
+                              className="p-1 text-red-600 rounded-lg bg-red-50 border border-red-200 transition-colors animate-pulse"
+                              title={isRtl ? 'انقر للتأكيد' : 'Click to confirm'}
+                            >
+                              <Check className="w-4 h-4" />
+                            </button>
+                          );
+                        }
+                        return (
+                          <button
+                            onClick={() => {
+                              if (user?.role === 'Employee') {
+                                setLeadToDelete(lead);
+                                setDeleteReason('');
+                                setDeleteRequestModalOpen(true);
+                              } else {
+                                setConfirmDeleteId(lead.id);
+                                setTimeout(() => setConfirmDeleteId(null), 3000);
+                                toast(isRtl ? 'انقر مرة أخرى للتأكيد' : 'Click again to confirm deletion', { icon: '⚠️' });
+                              }
+                            }}
+                            className="p-1 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors"
+                            title={user?.role === 'Employee' ? (isRtl ? 'طلب حذف' : 'Request Delete') : t('delete')}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        );
+                      })()}
                     </div>
                   </td>
                 </tr>
@@ -514,6 +650,74 @@ export const CRMLeads: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setModalOpen(false)}
+                className="flex-1 custom-btn-secondary py-2.5 text-xs"
+              >
+                {t('cancel')}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+      {/* Delete Reason Input Modal */}
+      {deleteRequestModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm" onClick={() => setDeleteRequestModalOpen(false)} />
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (leadToDelete && deleteReason.trim()) {
+                requestDeleteLead(
+                  leadToDelete.id,
+                  leadToDelete.name,
+                  user?.name || user?.email || 'Employee',
+                  deleteReason
+                );
+                toast.success(isRtl ? 'تم إرسال طلب الحذف بانتظار موافقة المدير' : 'Delete request submitted, awaiting admin approval');
+                setDeleteRequestModalOpen(false);
+                setDeleteReason('');
+                setLeadToDelete(null);
+              }
+            }}
+            className="bg-white rounded-2xl w-full max-w-md p-6 z-10 shadow-2xl relative border border-gray-100"
+          >
+            <button
+              type="button"
+              onClick={() => setDeleteRequestModalOpen(false)}
+              className="absolute top-4 end-4 p-1 rounded-xl text-gray-400 hover:bg-gray-100"
+            >
+              <X className="w-4 h-4" />
+            </button>
+            <h3 className="font-black text-gray-900 text-sm mb-4 flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-amber-500" />
+              <span>{isRtl ? 'طلب حذف عميل' : 'Request Lead Deletion'}</span>
+            </h3>
+            <p className="text-xs text-gray-500 mb-4">
+              {isRtl
+                ? `يرجى إدخال سبب مقنع ومفصل لطلب حذف العميل "${leadToDelete?.name}". سيتم إرسال هذا الطلب للمدير للموافقة.`
+                : `Please provide a reason for deleting "${leadToDelete?.name}". This action will submit a delete request for admin review.`}
+            </p>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-gray-500 mb-1.5">
+                  {isRtl ? 'سبب الحذف (إجباري)' : 'Reason for Deletion (Mandatory)'}
+                </label>
+                <textarea
+                  required
+                  value={deleteReason}
+                  onChange={(e) => setDeleteReason(e.target.value)}
+                  rows={3}
+                  className="custom-input text-xs"
+                  placeholder={isRtl ? 'مثال: عميل مكرر، أو البيانات خاطئة...' : 'e.g., Duplicate lead or wrong information...'}
+                />
+              </div>
+            </div>
+            <div className="flex gap-2.5 mt-6">
+              <button type="submit" className="flex-1 custom-btn-primary py-2.5 text-xs bg-amber-600 hover:bg-amber-700 border-amber-600">
+                {isRtl ? 'إرسال الطلب' : 'Submit Request'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setDeleteRequestModalOpen(false)}
                 className="flex-1 custom-btn-secondary py-2.5 text-xs"
               >
                 {t('cancel')}

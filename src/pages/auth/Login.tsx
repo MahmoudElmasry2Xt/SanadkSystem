@@ -7,6 +7,7 @@ import { loginStart, loginSuccess, loginFailure, registerSuccess, rolePermission
 import logo from '../../assets/logo.webp';
 import { IconButton, Tooltip, Snackbar } from '@mui/material';
 import { Visibility, VisibilityOff, ContentCopy, CheckCircle } from '@mui/icons-material';
+import { useAppStore } from '../../store/useAppStore';
 
 const customStyles = `
   @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Cairo:wght@400;700;900&family=Inter:wght@400;700;900&display=swap');
@@ -74,11 +75,14 @@ const dict = {
   }
 };
 
+const generateUserId = () => `u-${Date.now()}`;
+
 export const Login: React.FC = () => {
   const { i18n } = useTranslation();
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
   const { loading, error, registeredUsers } = useAppSelector((state) => state.auth);
+  const { addActivityLog } = useAppStore();
   
   const [isLogin, setIsLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
@@ -134,6 +138,13 @@ export const Login: React.FC = () => {
             })
           );
 
+          addActivityLog(
+            'User Login',
+            match.name,
+            'user',
+            `${match.email} logged in successfully as ${match.role}`
+          );
+
           if (match.status === 'Pending First Login') {
             navigate('/auth/force-change-password');
           } else {
@@ -155,7 +166,7 @@ export const Login: React.FC = () => {
       }
 
       const newUser = {
-        id: `u-${Date.now()}`,
+        id: generateUserId(),
         name: data.email.split('@')[0] || 'New User',
         email: data.email,
         role: 'Employee' as const,

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAppStore, type KPITemplate, type KPIItem } from '../store/useAppStore';
 import { Plus, Trash2, X, Settings, Database, Sliders } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 export const KPIBuilder: React.FC = () => {
   const { t, i18n } = useTranslation();
@@ -54,7 +55,7 @@ export const KPIBuilder: React.FC = () => {
     
     const totalWeight = tempItems.reduce((acc, curr) => acc + curr.weight, 0);
     if (totalWeight !== 100) {
-      alert(isRtl ? 'مجموع الأوزان النسبية للبنود يجب أن يساوي 100% بالتمام والكمال!' : 'The sum of weights must equal 100%!');
+      toast.error(isRtl ? 'مجموع الأوزان النسبية للبنود يجب أن يساوي 100% بالتمام والكمال!' : 'The sum of weights must equal 100%!');
       return;
     }
 
@@ -73,6 +74,7 @@ export const KPIBuilder: React.FC = () => {
     };
 
     addKpiTemplate(newTemplate);
+    toast.success(isRtl ? 'تم إنشاء قالب تقييم الأداء بنجاح!' : 'KPI Appraisal template created successfully!');
     setFormOpen(false);
     setTemplateName('');
     setJobTitle('');
