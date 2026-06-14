@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAppStore } from '../store/useAppStore';
 import {
@@ -33,8 +33,13 @@ export const CRMCommunication: React.FC = () => {
   // WhatsApp State
   const [activeChatId, setActiveChatId] = useState('ch1');
   const [messageText, setMessageText] = useState('');
+  const messagesEndRef = useRef<HTMLDivElement>(null);
   
   const activeChat = chats.find(c => c.id === activeChatId) || chats[0];
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [activeChatId, activeChat.messages]);
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
@@ -124,7 +129,7 @@ export const CRMCommunication: React.FC = () => {
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-gray-100 bg-white p-1 rounded-2xl border">
+      <div className="flex border-b border-gray-100 bg-white p-1 rounded-2xl border ">
         <button
           onClick={() => setActiveTab('whatsapp')}
           className={`flex-1 py-3 text-xs font-bold rounded-xl flex items-center justify-center gap-2 transition-all ${
@@ -168,8 +173,8 @@ export const CRMCommunication: React.FC = () => {
         {activeTab === 'whatsapp' && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden h-[calc(100vh-20rem)] min-h-[500px]">
             {/* Chats List Sidebar */}
-            <div className="border-e border-gray-100 flex flex-col h-full bg-gray-50/30">
-              <div className="p-4 border-b border-gray-50 bg-white">
+            <div className="border-e border-gray-100 flex flex-col h-full bg-gray-50/30 min-h-0 overflow-hidden">
+              <div className="p-4 border-b border-gray-50 bg-white shrink-0">
                 <span className="font-bold text-xs text-gray-900">{isRtl ? 'المحادثات النشطة' : 'Active Chats'}</span>
               </div>
               <div className="flex-1 overflow-y-auto p-2 space-y-1.5">
@@ -197,9 +202,9 @@ export const CRMCommunication: React.FC = () => {
             </div>
 
             {/* Chat Screen */}
-            <div className="lg:col-span-2 flex flex-col h-full bg-white relative">
+            <div className="lg:col-span-2 flex flex-col h-full bg-white relative min-h-0 overflow-hidden">
               {/* Chat Header */}
-              <div className="p-4 border-b border-gray-50 flex items-center justify-between">
+              <div className="p-4 border-b border-gray-50 flex items-center justify-between shrink-0 bg-white z-10">
                 <div>
                   <h4 className="font-bold text-xs text-gray-900">{activeChat.clientName}</h4>
                   <p className="text-[10px] text-gray-400 mt-0.5">{activeChat.clientPhone}</p>
@@ -248,10 +253,11 @@ export const CRMCommunication: React.FC = () => {
                     </div>
                   </div>
                 ))}
+                <div ref={messagesEndRef} />
               </div>
 
               {/* Send Box */}
-              <form onSubmit={handleSendMessage} className="p-3 border-t border-gray-50 flex gap-2 items-center">
+              <form onSubmit={handleSendMessage} className="p-3 border-t border-gray-50 flex gap-2 items-center shrink-0 bg-white z-10">
                 <input
                   type="text"
                   placeholder={t('chatPlaceholder')}

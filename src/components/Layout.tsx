@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useAppDispatch, useAppSelector } from '../store';
 import { logout } from '../store/authSlice';
 import { markNotificationRead } from '../store/notificationsSlice';
-import logo from '../assets/logo.jpg';
+import logo from '../assets/logo.webp';
 import {
   LayoutDashboard,
   Users,
@@ -184,11 +184,12 @@ export const Layout: React.FC = () => {
             <img
               src={logo}
               alt="Company Logo"
-              className="w-8 h-8 object-contain rounded-lg border border-gray-100 shadow-sm"
+              className="w-12  object-contain bg-red-500 rounded-full border border-red-100 shadow-sm"
             />
-            <span className="font-extrabold text-xl tracking-tight text-gray-900">
-              {t('appName')}<span className="text-red-600">.</span>
-            </span>
+             <span className="font-extrabold text-sm text-gray-900 tracking-tight">
+                Sanadk
+              </span>
+           
           </Link>
         </div>
 
@@ -301,16 +302,7 @@ export const Layout: React.FC = () => {
 
           <nav className="p-4 space-y-1 h-full overflow-y-auto pb-20">
             {/* Sidebar Logo Header */}
-            <div className="flex items-center gap-3 px-3.5 py-3 mb-6 border-b border-gray-50 shrink-0">
-              <img
-                src={logo}
-                alt="Sidebar Logo"
-                className="w-7 h-7 object-contain rounded-lg border border-gray-100"
-              />
-              <span className="font-extrabold text-sm text-gray-900 tracking-tight">
-                {t('appName')}
-              </span>
-            </div>
+            
 
             {navItems.map((item, idx) => {
               if (item.subItems) {
