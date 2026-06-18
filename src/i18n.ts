@@ -32,8 +32,8 @@ const resources = {
       governorate: "Governorate",
       notes: "Notes",
       importExcelCsv: "Import Excel/CSV",
-      activitiesTimeline: "Activities Timeline",
       searchLeads: "Search leads...",
+      searchEmployees: "Search employees...",
       allSources: "All Sources",
       allGovernorates: "All Governorates",
       whatsapp: "WhatsApp",
@@ -154,7 +154,20 @@ const resources = {
       date: "Date",
       value: "Value",
       role: "Role",
-      profile: "Profile"
+      profile: "Profile",
+      allPriorities: "All Priorities",
+      allStatuses: "All Statuses",
+      allAssignees: "All Assignees",
+      allDepartments: "All Departments",
+      uploadReport: "Upload Report",
+      uploadedReportsList: "Uploaded Team Reports",
+      uploaderName: "Uploader Name",
+      serverTime: "Server Time",
+      pdfOnly: "PDF files only",
+      dragOrSelectPdf: "Select PDF report file...",
+      successUpload: "Report uploaded successfully!",
+      errorPdfOnly: "Please select a PDF file only!",
+      resetFilters: "Reset Filters"
     }
   },
   ar: {
@@ -186,8 +199,8 @@ const resources = {
       governorate: "المحافظة",
       notes: "ملاحظات",
       importExcelCsv: "استيراد Excel/CSV",
-      activitiesTimeline: "سجل الأنشطة",
       searchLeads: "البحث عن عملاء...",
+      searchEmployees: "البحث عن موظفين...",
       allSources: "كل المصادر",
       allGovernorates: "كل المحافظات",
       whatsapp: "واتساب",
@@ -308,7 +321,20 @@ const resources = {
       date: "التاريخ",
       value: "القيمة",
       role: "الصلاحية",
-      profile: "الملف الشخصي"
+      profile: "الملف الشخصي",
+      allPriorities: "كل الأولويات",
+      allStatuses: "كل الحالات",
+      allAssignees: "كل المسؤولين",
+      allDepartments: "كل الأقسام",
+      uploadReport: "رفع تقرير",
+      uploadedReportsList: "تقارير الفريق المرفوعة",
+      uploaderName: "اسم رافع التقرير",
+      serverTime: "وقت السيرفر",
+      pdfOnly: "ملفات PDF فقط",
+      dragOrSelectPdf: "اختر ملف التقرير بصيغة PDF...",
+      successUpload: "تم رفع التقرير بنجاح!",
+      errorPdfOnly: "يرجى اختيار ملف PDF فقط!",
+      resetFilters: "إعادة ضبط التصفية"
     }
   }
 };

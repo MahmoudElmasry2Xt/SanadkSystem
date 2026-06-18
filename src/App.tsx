@@ -20,6 +20,7 @@ import { FinanceRevenues } from './pages/FinanceRevenues';
 import { FinanceExpenses } from './pages/FinanceExpenses';
 import { FinanceReports } from './pages/FinanceReports';
 import { MarketingCampaigns } from './pages/MarketingCampaigns';
+import { CampaignDetails } from './pages/CampaignDetails';
 import { MarketingResults } from './pages/MarketingResults';
 import { Files } from './pages/Files';
 import { Notifications } from './pages/Notifications';
@@ -240,6 +241,14 @@ const router = createBrowserRouter([
         element: (
           <ProtectedRoute requiredPermission="VIEW_MARKETING">
             <MarketingCampaigns />
+          </ProtectedRoute>
+        )
+      },
+      {
+        path: '/marketing/campaigns/:id',
+        element: (
+          <ProtectedRoute requiredPermission="VIEW_MARKETING">
+            <CampaignDetails />
           </ProtectedRoute>
         )
       },

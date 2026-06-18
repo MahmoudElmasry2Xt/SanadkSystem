@@ -80,10 +80,10 @@ export const rolePermissions: Record<UserRole, Permission[]> = {
     'VIEW_LEADS', 'MANAGE_LEADS', 'VIEW_REPORTS', 'VIEW_TASKS', 'MANAGE_TASKS'
   ],
   'Team Leader': [
-    'VIEW_LEADS', 'VIEW_KPI', 'VIEW_TASKS', 'MANAGE_TASKS'
+    'VIEW_LEADS', 'VIEW_KPI', 'VIEW_TASKS', 'MANAGE_TASKS', 'VIEW_REPORTS'
   ],
   'Employee': [
-    'VIEW_TASKS', 'VIEW_KPI'
+    'VIEW_TASKS', 'VIEW_KPI', 'VIEW_REPORTS'
   ],
   'Client': []
 };

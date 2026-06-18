@@ -99,7 +99,7 @@ export interface Campaign {
   id: string;
   name: string;
   budget: number;
-  platform: 'Facebook' | 'Google Ads' | 'TikTok' | 'Snapchat';
+  platform: string[];
   goal: string;
   status: 'Active' | 'Paused' | 'Completed';
   assignee: string;
@@ -109,6 +109,9 @@ export interface Campaign {
   revenueGenerated: number;
   description?: string;
   notes?: string;
+  roas?: number;
+  roi?: number;
+  viewAttendance?: number;
 }
 
 export interface LeadDeleteRequest {
@@ -137,6 +140,15 @@ export interface SystemFile {
   size: string;
   uploadDate: string;
   type: string;
+}
+
+export interface UploadedReport {
+  id: string;
+  fileName: string;
+  fileSize: string;
+  uploaderName: string;
+  department: string;
+  uploadTime: string; // Server Time
 }
 
 export interface Notification {
@@ -178,6 +190,7 @@ interface AppState {
   chats: ChatSession[];
   deleteRequests: LeadDeleteRequest[];
   activityLogs: ActivityLog[];
+  uploadedReports: UploadedReport[];
   
   // Actions
   setRole: (role: UserRole) => void;
@@ -207,6 +220,9 @@ interface AppState {
   sendChatMessage: (chatId: string, text: string) => void;
   assignLead: (leadId: string, agentName: string) => void;
   autoAssignLeads: (rule: 'workload' | 'performance' | 'location') => void;
+  
+  addUploadedReport: (report: Omit<UploadedReport, 'id' | 'uploadTime'>) => void;
+  deleteUploadedReport: (id: string) => void;
   
   // Deletion requests actions
   requestDeleteLead: (leadId: string, leadName: string, requestedBy: string, reason: string) => void;
@@ -318,10 +334,10 @@ const mockFinanceRecords: FinancialRecord[] = [
 ];
 
 const mockCampaigns: Campaign[] = [
-  { id: 'c1', name: 'حملة ترويج نظام الـ CRM للمؤسسات', budget: 5000, platform: 'Facebook', goal: 'Leads Generation', status: 'Active', assignee: 'دينا الشافعي', reach: 65000, clicks: 3200, leads: 145, revenueGenerated: 35000 },
-  { id: 'c2', name: 'حملة البحث وجوجل إعلانات Lead Gen', budget: 4000, platform: 'Google Ads', goal: 'Sales Conversion', status: 'Active', assignee: 'دينا الشافعي', reach: 45000, clicks: 5100, leads: 180, revenueGenerated: 54000 },
-  { id: 'c3', name: 'حملة توعية وإطلاق هوية سندك', budget: 3000, platform: 'TikTok', goal: 'Reach & Views', status: 'Completed', assignee: 'شريف النجار', reach: 180000, clicks: 12500, leads: 40, revenueGenerated: 12000 },
-  { id: 'c4', name: 'توسعات السوق الخليجي عقارات', budget: 6000, platform: 'Snapchat', goal: 'App Installs', status: 'Paused', assignee: 'دينا الشافعي', reach: 90000, clicks: 4300, leads: 75, revenueGenerated: 18000 }
+  { id: 'c1', name: 'حملة ترويج نظام الـ CRM للمؤسسات', budget: 5000, platform: ['Facebook'], goal: 'Leads Generation', status: 'Active', assignee: 'دينا الشافعي', reach: 65000, clicks: 3200, leads: 145, revenueGenerated: 35000, roas: 7.0, roi: 600, viewAttendance: 12000 },
+  { id: 'c2', name: 'حملة البحث وجوجل إعلانات Lead Gen', budget: 4000, platform: ['Google Ads'], goal: 'Sales Conversion', status: 'Active', assignee: 'دينا الشافعي', reach: 45000, clicks: 5100, leads: 180, revenueGenerated: 54000, roas: 13.5, roi: 1250, viewAttendance: 8500 },
+  { id: 'c3', name: 'حملة توعية وإطلاق هوية سندك', budget: 3000, platform: ['TikTok'], goal: 'Reach & Views', status: 'Completed', assignee: 'شريف النجار', reach: 180000, clicks: 12500, leads: 40, revenueGenerated: 12000, roas: 4.0, roi: 300, viewAttendance: 45000 },
+  { id: 'c4', name: 'توسعات السوق الخليجي عقارات', budget: 6000, platform: ['Snapchat'], goal: 'App Installs', status: 'Paused', assignee: 'دينا الشافعي', reach: 90000, clicks: 4300, leads: 75, revenueGenerated: 18000, roas: 3.0, roi: 200, viewAttendance: 15000 }
 ];
 
 const mockFiles: SystemFile[] = [
@@ -329,6 +345,11 @@ const mockFiles: SystemFile[] = [
   { id: 'f2', name: 'العرض الفني والمالي - ريد للمقاولات.docx', category: 'Proposals', size: '1.8 MB', uploadDate: '2026-06-08', type: 'docx' },
   { id: 'f3', name: 'صور الهوية التجارية - لوجو سندك.zip', category: 'Client Files', size: '15.5 MB', uploadDate: '2026-06-11', type: 'zip' },
   { id: 'f4', name: 'مسوغات تعيين الموظف محمود عبد السلام.pdf', category: 'Employee Files', size: '4.2 MB', uploadDate: '2026-01-15', type: 'pdf' }
+];
+
+const mockUploadedReports: UploadedReport[] = [
+  { id: 'rep-1', fileName: 'تقرير المبيعات والعملاء لشهر مايو.pdf', fileSize: '1.2 MB', uploaderName: 'محمود عبد السلام', department: 'المبيعات', uploadTime: '2026-06-18 10:15:30' },
+  { id: 'rep-2', fileName: 'خطة الحملات التسويقية لشهر يونيو.pdf', fileSize: '2.4 MB', uploaderName: 'دينا الشافعي', department: 'التسويق', uploadTime: '2026-06-18 11:45:12' }
 ];
 
 const mockNotifications: Notification[] = [
@@ -430,6 +451,7 @@ export const useAppStore = create<AppState>((set) => ({
   chats: mockChats,
   deleteRequests: mockDeleteRequests,
   activityLogs: mockActivityLogs,
+  uploadedReports: mockUploadedReports,
   
   setRole: (role) => set({ currentRole: role }),
   
@@ -953,5 +975,20 @@ export const useAppStore = create<AppState>((set) => ({
       }
       return c;
     })
+  })),
+
+  addUploadedReport: (report) => set((state) => {
+    const newReport: UploadedReport = {
+      ...report,
+      id: 'rep-' + (state.uploadedReports.length + 1) + '-' + Math.random().toString(36).substr(2, 4),
+      uploadTime: new Date().toISOString().replace('T', ' ').substring(0, 19)
+    };
+    return {
+      uploadedReports: [newReport, ...state.uploadedReports]
+    };
+  }),
+
+  deleteUploadedReport: (id) => set((state) => ({
+    uploadedReports: state.uploadedReports.filter((r) => r.id !== id)
   }))
 }));

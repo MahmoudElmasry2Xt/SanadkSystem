@@ -15,7 +15,6 @@ export const Files: React.FC = () => {
   // Form State
   const [fileName, setFileName] = useState('');
   const [category, setCategory] = useState<SystemFile['category']>('Contracts');
-  const [fileSize, setFileSize] = useState('1.5 MB');
 
   const folders: SystemFile['category'][] = ['Contracts', 'Proposals', 'Client Files', 'Employee Files'];
 
@@ -29,7 +28,7 @@ export const Files: React.FC = () => {
     addFile({
       name: fileName,
       category,
-      size: fileSize,
+      size: '1.0 MB',
       type: ext
     });
 
@@ -177,31 +176,18 @@ export const Files: React.FC = () => {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-gray-500 mb-1.5">{isRtl ? 'المجلد المستهدف' : 'Category Folder'}</label>
-                  <select
-                    value={category}
-                    onChange={(e) => setCategory(e.target.value as any)}
-                    className="custom-input text-xs"
-                  >
-                    <option value="Contracts">Contracts</option>
-                    <option value="Proposals">Proposals</option>
-                    <option value="Client Files">Client Files</option>
-                    <option value="Employee Files">Employee Files</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-gray-500 mb-1.5">{isRtl ? 'حجم تقريبي' : 'File Size'}</label>
-                  <input
-                    type="text"
-                    required
-                    value={fileSize}
-                    onChange={(e) => setFileSize(e.target.value)}
-                    className="custom-input text-xs font-mono"
-                    placeholder="2.4 MB"
-                  />
-                </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-500 mb-1.5">{isRtl ? 'المجلد المستهدف' : 'Category Folder'}</label>
+                <select
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value as any)}
+                  className="custom-input text-xs"
+                >
+                  <option value="Contracts">Contracts</option>
+                  <option value="Proposals">Proposals</option>
+                  <option value="Client Files">Client Files</option>
+                  <option value="Employee Files">Employee Files</option>
+                </select>
               </div>
             </div>
 

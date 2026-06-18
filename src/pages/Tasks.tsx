@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAppStore, type Task } from '../store/useAppStore';
 import {
@@ -9,7 +9,10 @@ import {
   Trash2,
   X,
   ArrowRight,
-  ArrowLeft
+  ArrowLeft,
+  Search,
+  ChevronDown,
+  Check
 } from 'lucide-react';
 
 export const Tasks: React.FC = () => {
@@ -20,6 +23,10 @@ export const Tasks: React.FC = () => {
 
   const [activeView, setActiveView] = useState<'list' | 'kanban' | 'calendar'>('list');
   const [formOpen, setFormOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterPriority, setFilterPriority] = useState<string>('All');
+  const [filterStatus, setFilterStatus] = useState<string>('All');
+  const [filterAssignee, setFilterAssignee] = useState<string>('All');
 
   // Form State
   const [formData, setFormData] = useState({
@@ -30,6 +37,28 @@ export const Tasks: React.FC = () => {
     assignee: '',
     status: 'To Do' as Task['status']
   });
+
+  // Searchable assignee dropdown state
+  const [assigneeSearch, setAssigneeSearch] = useState('');
+  const [assigneeDropdownOpen, setAssigneeDropdownOpen] = useState(false);
+  const assigneeDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close assignee dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (assigneeDropdownRef.current && !assigneeDropdownRef.current.contains(e.target as Node)) {
+        setAssigneeDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const filteredEmployeesForAssignee = employees.filter((emp) =>
+    emp.name.toLowerCase().includes(assigneeSearch.toLowerCase()) ||
+    emp.department.toLowerCase().includes(assigneeSearch.toLowerCase()) ||
+    emp.jobTitle.toLowerCase().includes(assigneeSearch.toLowerCase())
+  );
 
   const statuses: Task['status'][] = ['To Do', 'In Progress', 'Review', 'Completed', 'Cancelled'];
   const statusLabels: Record<Task['status'], string> = {
@@ -48,6 +77,28 @@ export const Tasks: React.FC = () => {
     'Cancelled': 'border-t-red-500 bg-red-50/20 text-red-700'
   };
 
+  // Filter tasks globally based on search, priority, status and assignee
+  const filteredTasks = tasks.filter((task) => {
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      const matchesSearch =
+        task.name.toLowerCase().includes(q) ||
+        task.description.toLowerCase().includes(q) ||
+        task.assignee.toLowerCase().includes(q);
+      if (!matchesSearch) return false;
+    }
+    if (filterPriority !== 'All' && task.priority !== filterPriority) {
+      return false;
+    }
+    if (filterStatus !== 'All' && task.status !== filterStatus) {
+      return false;
+    }
+    if (filterAssignee !== 'All' && task.assignee !== filterAssignee) {
+      return false;
+    }
+    return true;
+  });
+
   const handleCreateTask = (e: React.FormEvent) => {
     e.preventDefault();
     addTask(formData);
@@ -60,6 +111,7 @@ export const Tasks: React.FC = () => {
       assignee: employees[0]?.name || '',
       status: 'To Do'
     });
+    setAssigneeSearch('');
   };
 
   const changeStatus = (task: Task, newStatus: Task['status']) => {
@@ -96,6 +148,7 @@ export const Tasks: React.FC = () => {
         <button
           onClick={() => {
             setFormData({ ...formData, assignee: employees[0]?.name || '' });
+            setAssigneeSearch('');
             setFormOpen(true);
           }}
           className="w-full sm:w-auto custom-btn-primary py-2.5 text-xs flex items-center justify-center gap-1.5"
@@ -103,6 +156,109 @@ export const Tasks: React.FC = () => {
           <Plus className="w-4 h-4" />
           <span>{t('createTask')}</span>
         </button>
+      </div>
+
+      {/* Search Filter */}
+      <div className="relative max-w-md w-full">
+        <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder={isRtl ? 'ابحث بالاسم، الوصف، أو المسؤول...' : 'Search by name, description, or assignee...'}
+          className="
+            w-full
+            h-10
+            rounded-xl
+            border
+            border-gray-200
+            bg-white
+            ps-10
+            pe-10
+            text-xs
+            placeholder:text-gray-400
+            focus:outline-none
+            focus:ring-4
+            focus:ring-red-500/20
+            focus:border-red-500
+          "
+        />
+        {searchQuery && (
+          <button
+            onClick={() => setSearchQuery('')}
+            className="absolute end-3 top-1/2 -translate-y-1/2 p-0.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        )}
+      </div>
+
+      {/* Filters Bar */}
+      <div className="flex flex-wrap items-center gap-3 bg-white p-4 rounded-2xl border border-gray-100 shadow-sm w-full">
+        {/* Priority Filter */}
+        <div className="flex flex-col min-w-[120px]">
+          <span className="text-[10px] font-bold text-gray-400 mb-1">{t('priority')}</span>
+          <select
+            value={filterPriority}
+            onChange={(e) => setFilterPriority(e.target.value)}
+            className="custom-input py-1.5 px-2 text-xs bg-gray-50 border border-gray-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500/20"
+          >
+            <option value="All">{t('allPriorities')}</option>
+            <option value="High">{t('high')}</option>
+            <option value="Medium">{t('medium')}</option>
+            <option value="Low">{t('low')}</option>
+          </select>
+        </div>
+
+        {/* Status Filter */}
+        <div className="flex flex-col min-w-[120px]">
+          <span className="text-[10px] font-bold text-gray-400 mb-1">{t('status')}</span>
+          <select
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value)}
+            className="custom-input py-1.5 px-2 text-xs bg-gray-50 border border-gray-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500/20"
+          >
+            <option value="All">{t('allStatuses')}</option>
+            {statuses.map((s) => (
+              <option key={s} value={s}>
+                {statusLabels[s]}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Assignee Filter */}
+        <div className="flex flex-col min-w-[140px]">
+          <span className="text-[10px] font-bold text-gray-400 mb-1">{t('assignee')}</span>
+          <select
+            value={filterAssignee}
+            onChange={(e) => setFilterAssignee(e.target.value)}
+            className="custom-input py-1.5 px-2 text-xs bg-gray-50 border border-gray-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500/20"
+          >
+            <option value="All">{t('allAssignees')}</option>
+            {/* Find unique assignees in tasks */}
+            {Array.from(new Set(tasks.map((t) => t.assignee))).map((name) => (
+              <option key={name} value={name}>
+                {name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Reset Button */}
+        {(filterPriority !== 'All' || filterStatus !== 'All' || filterAssignee !== 'All' || searchQuery !== '') && (
+          <button
+            onClick={() => {
+              setFilterPriority('All');
+              setFilterStatus('All');
+              setFilterAssignee('All');
+              setSearchQuery('');
+            }}
+            className="self-end h-8 px-3 text-[10px] font-bold text-red-600 hover:text-red-700 hover:bg-red-50 rounded-xl transition-all border border-red-100/50 mt-4 sm:mt-0"
+          >
+            {t('resetFilters')}
+          </button>
+        )}
       </div>
 
       {/* Tabs */}
@@ -160,7 +316,7 @@ export const Tasks: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
-                {tasks.map((task) => (
+                {filteredTasks.map((task) => (
                   <tr key={task.id} className="hover:bg-gray-50/50 transition-colors">
                     <td className="p-4 font-bold text-gray-900">
                       {task.name}
@@ -205,6 +361,15 @@ export const Tasks: React.FC = () => {
                     </td>
                   </tr>
                 ))}
+                {filteredTasks.length === 0 && (
+                  <tr>
+                    <td colSpan={6} className="p-12 text-center text-gray-400 text-xs">
+                      {searchQuery
+                        ? (isRtl ? 'لا توجد نتائج مطابقة للبحث.' : 'No matching results.')
+                        : (isRtl ? 'لا توجد مهام.' : 'No tasks yet.')}
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -215,7 +380,7 @@ export const Tasks: React.FC = () => {
         <div className="overflow-x-auto pb-4">
           <div className="flex gap-4 min-w-[1200px] items-start">
             {statuses.map((status) => {
-              const statusTasks = tasks.filter(t => t.status === status);
+              const statusTasks = filteredTasks.filter(t => t.status === status);
               return (
                 <div key={status} className="w-72 bg-white rounded-2xl border border-gray-100 flex flex-col shadow-sm">
                   <div className={`p-4 border-b border-gray-50 rounded-t-2xl border-t-4 flex items-center justify-between font-bold text-xs ${statusColors[status]}`}>
@@ -303,7 +468,7 @@ export const Tasks: React.FC = () => {
             {Array.from({ length: 30 }).map((_, idx) => {
               const dayNum = idx + 1;
               const dateStr = `2026-06-${dayNum < 10 ? '0' + dayNum : dayNum}`;
-              const dayTasks = tasks.filter(t => t.dueDate === dateStr);
+              const dayTasks = filteredTasks.filter(t => t.dueDate === dateStr);
               
               return (
                 <div key={idx} className="bg-gray-50/50 border border-gray-100 rounded-xl p-2 flex flex-col justify-between items-start hover:border-red-100 transition-colors">
@@ -389,17 +554,72 @@ export const Tasks: React.FC = () => {
               </div>
 
               <div className="grid grid-cols-2 gap-4">
+                {/* Searchable Assignee Dropdown */}
                 <div>
                   <label className="block text-xs font-bold text-gray-500 mb-1.5">{t('assignee')}</label>
-                  <select
-                    value={formData.assignee}
-                    onChange={(e) => setFormData({ ...formData, assignee: e.target.value })}
-                    className="custom-input text-xs"
-                  >
-                    {employees.map(emp => (
-                      <option key={emp.id} value={emp.name}>{emp.name}</option>
-                    ))}
-                  </select>
+                  <div className="relative" ref={assigneeDropdownRef}>
+                    <div
+                      className="custom-input text-xs flex items-center justify-between cursor-pointer gap-1"
+                      onClick={() => setAssigneeDropdownOpen(!assigneeDropdownOpen)}
+                    >
+                      <span className={`truncate ${formData.assignee ? 'text-gray-900' : 'text-gray-400'}`}>
+                        {formData.assignee || (isRtl ? 'اختر موظف...' : 'Select assignee...')}
+                      </span>
+                      <ChevronDown className={`w-3.5 h-3.5 text-gray-400 shrink-0 transition-transform ${assigneeDropdownOpen ? 'rotate-180' : ''}`} />
+                    </div>
+
+                    {assigneeDropdownOpen && (
+                      <div className="absolute top-full start-0 end-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-xl z-50 overflow-hidden">
+                        {/* Search Input */}
+                        <div className="p-2 border-b border-gray-100">
+                          <div className="relative">
+                            <Search className="absolute start-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
+                            <input
+                              type="text"
+                              value={assigneeSearch}
+                              onChange={(e) => setAssigneeSearch(e.target.value)}
+                              placeholder={isRtl ? 'ابحث عن موظف...' : 'Search employee...'}
+                              className="w-full text-xs py-2 ps-8 pe-3 border border-gray-100 rounded-lg focus:outline-none focus:border-red-300 focus:ring-1 focus:ring-red-100 bg-gray-50/50"
+                              autoFocus
+                            />
+                          </div>
+                        </div>
+
+                        {/* Options List */}
+                        <div className="max-h-40 overflow-y-auto">
+                          {filteredEmployeesForAssignee.length > 0 ? (
+                            filteredEmployeesForAssignee.map((emp) => (
+                              <button
+                                key={emp.id}
+                                type="button"
+                                onClick={() => {
+                                  setFormData({ ...formData, assignee: emp.name });
+                                  setAssigneeDropdownOpen(false);
+                                  setAssigneeSearch('');
+                                }}
+                                className="w-full flex items-center gap-2.5 px-3 py-2.5 text-start hover:bg-red-50/50 transition-colors"
+                              >
+                                <span className="w-6 h-6 rounded-full bg-red-50 text-red-600 flex items-center justify-center font-bold text-[9px] shrink-0">
+                                  {emp.name.substring(0, 2)}
+                                </span>
+                                <div className="flex-1 min-w-0">
+                                  <span className="block text-xs font-bold text-gray-900 truncate">{emp.name}</span>
+                                  <span className="block text-[10px] text-gray-400 truncate">{emp.department} — {emp.jobTitle}</span>
+                                </div>
+                                {formData.assignee === emp.name && (
+                                  <Check className="w-3.5 h-3.5 text-red-600 shrink-0" />
+                                )}
+                              </button>
+                            ))
+                          ) : (
+                            <div className="px-3 py-4 text-center text-[10px] text-gray-400">
+                              {isRtl ? 'لا توجد نتائج' : 'No results found'}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-gray-500 mb-1.5">{t('status')}</label>

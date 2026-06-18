@@ -1,9 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAppStore, type Lead } from '../store/useAppStore';
 import { useAppSelector } from '../store';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, Eye, Phone } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Eye, Phone, Search, X } from 'lucide-react';
 
 export const CRMPipeline: React.FC = () => {
   const { t, i18n } = useTranslation();
@@ -11,6 +11,8 @@ export const CRMPipeline: React.FC = () => {
   
   const { leads, updateLead } = useAppStore();
   const { user } = useAppSelector((state) => state.auth);
+
+  const [searchQuery, setSearchQuery] = useState('');
 
   const stages: Lead['status'][] = [
     'New',
@@ -63,6 +65,18 @@ export const CRMPipeline: React.FC = () => {
     }
   };
 
+  // Filter leads globally based on search query
+  const filteredLeads = leads.filter((l) => {
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase();
+    return (
+      l.name.toLowerCase().includes(q) ||
+      l.company.toLowerCase().includes(q) ||
+      l.phone.includes(q) ||
+      (l.email && l.email.toLowerCase().includes(q))
+    );
+  });
+
   return (
     <div className="space-y-6 h-full flex flex-col">
       {/* Title */}
@@ -75,11 +89,46 @@ export const CRMPipeline: React.FC = () => {
         </p>
       </div>
 
+      {/* Search Filter */}
+      <div className="relative max-w-md w-full">
+        <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder={isRtl ? 'ابحث بالاسم، الشركة، أو رقم الهاتف...' : 'Search by name, company, or phone...'}
+          className="
+            w-full
+            h-10
+            rounded-xl
+            border
+            border-gray-200
+            bg-white
+            ps-10
+            pe-10
+            text-xs
+            placeholder:text-gray-400
+            focus:outline-none
+            focus:ring-4
+            focus:ring-red-500/20
+            focus:border-red-500
+          "
+        />
+        {searchQuery && (
+          <button
+            onClick={() => setSearchQuery('')}
+            className="absolute end-3 top-1/2 -translate-y-1/2 p-0.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        )}
+      </div>
+
       {/* Kanban Board Container */}
       <div className="flex-1 overflow-x-auto pb-4">
-        <div className="flex gap-4 min-w-[1600px] h-[calc(100vh-14rem)] items-start">
+        <div className="flex gap-4 min-w-[1600px] h-[calc(100vh-18rem)] items-start">
           {stages.map((stage) => {
-            const stageLeads = leads.filter((l) => {
+            const stageLeads = filteredLeads.filter((l) => {
               if (l.status !== stage) return false;
               if (user?.role === 'Employee') {
                 return l.assignedTo === 'محمد حسن (Employee)' || l.assignedTo === user.name;

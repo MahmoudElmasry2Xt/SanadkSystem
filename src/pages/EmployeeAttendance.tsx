@@ -9,7 +9,8 @@ import {
   CheckCircle2, 
   XCircle, 
   Filter, 
-  AlertTriangle 
+  AlertTriangle,
+  Search
 } from 'lucide-react';
 
 export const EmployeeAttendance: React.FC = () => {
@@ -95,10 +96,36 @@ export const EmployeeAttendance: React.FC = () => {
 
   const selectableEmployees = getSelectableEmployees();
 
+  // Local state for selected employee search, filters, and API feedback
+  const [empSearch, setEmpSearch] = useState('');
+  const [selectedDept, setSelectedDept] = useState('All');
+  const [statusFilter, setStatusFilter] = useState('All');
+  
+  const [selectedEmpId, setSelectedEmpId] = useState<string>('');
+  const [dateFilter, setDateFilter] = useState<string>('');
+  const [apiFeedback, setApiFeedback] = useState<{ success: boolean; message: string } | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+
+  const [activeTab, setActiveTab] = useState<'personal' | 'team'>('personal');
+
+  // Filter selectable employees list by name/email and department
+  const filteredEmployees = selectableEmployees.filter(emp => {
+    const matchesSearch = empSearch.trim() === '' || 
+      emp.name.toLowerCase().includes(empSearch.toLowerCase()) ||
+      emp.email.toLowerCase().includes(empSearch.toLowerCase());
+      
+    const matchesDept = selectedDept === 'All' || emp.department === selectedDept;
+    
+    return matchesSearch && matchesDept;
+  });
+
+  // Unique departments for filter list
+  const departmentsList = Array.from(new Set(selectableEmployees.map(e => e.department).filter(Boolean)));
+
   // Group selectable employees by department for dropdown UI
   const getGroupedEmployees = () => {
     const groups: Record<string, typeof employees> = {};
-    selectableEmployees.forEach(emp => {
+    filteredEmployees.forEach(emp => {
       const dept = emp.department || (isRtl ? 'أخرى' : 'Other');
       if (!groups[dept]) {
         groups[dept] = [];
@@ -109,14 +136,6 @@ export const EmployeeAttendance: React.FC = () => {
   };
 
   const groupedEmployees = getGroupedEmployees();
-
-  // Local state for selected employee, dates, and API feedback
-  const [selectedEmpId, setSelectedEmpId] = useState<string>('');
-  const [dateFilter, setDateFilter] = useState<string>('');
-  const [apiFeedback, setApiFeedback] = useState<{ success: boolean; message: string } | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-
-  const [activeTab, setActiveTab] = useState<'personal' | 'team'>('personal');
 
   const defaultEmp = selectableEmployees.find(e => e.email.toLowerCase() === loggedInUser?.email?.toLowerCase()) || selectableEmployees[0];
   const activeEmployee = hasTabs && activeTab === 'team'
@@ -176,10 +195,11 @@ export const EmployeeAttendance: React.FC = () => {
     }, 600);
   };
 
-  // Filter logs by date filter
+  // Filter logs by date and status filters
   const filteredLogs = attendanceLogs.filter(log => {
-    if (!dateFilter) return true;
-    return log.date === dateFilter;
+    const matchesDate = !dateFilter || log.date === dateFilter;
+    const matchesStatus = statusFilter === 'All' || log.status === statusFilter;
+    return matchesDate && matchesStatus;
   });
 
   return (
@@ -197,28 +217,66 @@ export const EmployeeAttendance: React.FC = () => {
 
         {/* Dropdown selector for Managers/Admins in Team Monitor Tab */}
         {hasTabs && activeTab === 'team' && selectableEmployees.length > 0 && (
-          <div className="w-full sm:w-64">
-            <label className="block text-[10px] font-bold text-gray-500 mb-1">
-              {isRtl ? 'عرض سجل حضور الموظف:' : 'Viewing Attendance for:'}
-            </label>
-            <select
-              value={selectedEmpId || defaultEmp?.id || ""}
-              onChange={(e) => {
-                setSelectedEmpId(e.target.value);
-                setApiFeedback(null);
-              }}
-              className="custom-input py-2 text-xs font-semibold"
-            >
-              {Object.entries(groupedEmployees).map(([deptName, deptEmps]) => (
-                <optgroup key={deptName} label={deptName}>
-                  {deptEmps.map(emp => (
-                    <option key={emp.id} value={emp.id}>
-                      {emp.name}
-                    </option>
-                  ))}
-                </optgroup>
-              ))}
-            </select>
+          <div className="flex flex-col sm:flex-row gap-3 items-end w-full sm:w-auto">
+            {/* Search Employee input */}
+            <div className="relative w-full sm:w-48 text-start">
+              <label className="block text-[10px] font-bold text-gray-500 mb-1">
+                {isRtl ? 'بحث باسم الموظف:' : 'Search Employee:'}
+              </label>
+              <div className="relative">
+                <Search className="w-3.5 h-3.5 text-gray-400 absolute start-2.5 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  placeholder={isRtl ? 'ابحث...' : 'Search...'}
+                  value={empSearch}
+                  onChange={(e) => setEmpSearch(e.target.value)}
+                  className="custom-input py-1.5 ps-8 text-xs font-semibold w-full"
+                />
+              </div>
+            </div>
+            
+            {/* Department Filter */}
+            <div className="w-full sm:w-40 text-start">
+              <label className="block text-[10px] font-bold text-gray-500 mb-1">
+                {isRtl ? 'تصفية بالقسم:' : 'Filter by Dept:'}
+              </label>
+              <select
+                value={selectedDept}
+                onChange={(e) => setSelectedDept(e.target.value)}
+                className="custom-input py-1.5 text-xs font-semibold w-full"
+              >
+                <option value="All">{isRtl ? 'كل الأقسام' : 'All Departments'}</option>
+                {departmentsList.map(dept => (
+                  <option key={dept} value={dept}>{dept}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Employee Select */}
+            <div className="w-full sm:w-56 text-start">
+              <label className="block text-[10px] font-bold text-gray-500 mb-1">
+                {isRtl ? 'اختر الموظف لعرض السجل:' : 'Viewing Attendance for:'}
+              </label>
+              <select
+                value={selectedEmpId || defaultEmp?.id || ""}
+                onChange={(e) => {
+                  setSelectedEmpId(e.target.value);
+                  setApiFeedback(null);
+                }}
+                className="custom-input py-1.5 text-xs font-semibold w-full"
+              >
+                <option value="">{isRtl ? '-- اختر موظفاً --' : '-- Select Employee --'}</option>
+                {Object.entries(groupedEmployees).map(([deptName, deptEmps]) => (
+                  <optgroup key={deptName} label={deptName}>
+                    {deptEmps.map(emp => (
+                      <option key={emp.id} value={emp.id}>
+                        {emp.name}
+                      </option>
+                    ))}
+                  </optgroup>
+                ))}
+              </select>
+            </div>
           </div>
         )}
       </div>
@@ -480,19 +538,35 @@ export const EmployeeAttendance: React.FC = () => {
                   {isRtl ? `جدول حضور الموظف: ${activeEmployee.name}` : `Attendance Log Ledger: ${activeEmployee.name}`}
                 </span>
 
-                {/* Date Filter */}
-                <div className="flex items-center gap-2 w-full sm:w-auto">
+                {/* Date & Status Filters */}
+                <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
                   <Filter className="w-3.5 h-3.5 text-gray-400" />
+                  
+                  {/* Status filter dropdown */}
+                  <select
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value)}
+                    className="custom-input py-1 px-2 text-[11px] w-full sm:w-32 font-semibold"
+                  >
+                    <option value="All">{isRtl ? 'كل الحالات' : 'All Statuses'}</option>
+                    <option value="Present">{isRtl ? 'حاضر' : 'Present'}</option>
+                    <option value="Late">{isRtl ? 'متأخر' : 'Late'}</option>
+                    <option value="Absent">{isRtl ? 'غائب' : 'Absent'}</option>
+                  </select>
+
                   <input
                     type="date"
                     value={dateFilter}
                     onChange={(e) => setDateFilter(e.target.value)}
-                    className="custom-input py-1 px-2.5 text-[11px] w-full sm:w-40 font-mono"
+                    className="custom-input py-1 px-2.5 text-[11px] w-full sm:w-36 font-mono"
                   />
-                  {dateFilter && (
+                  {(dateFilter || statusFilter !== 'All') && (
                     <button
-                      onClick={() => setDateFilter('')}
-                      className="text-[10px] text-red-600 hover:underline font-bold"
+                      onClick={() => {
+                        setDateFilter('');
+                        setStatusFilter('All');
+                      }}
+                      className="text-[10px] text-red-600 hover:underline font-bold px-1"
                     >
                       {isRtl ? 'إلغاء' : 'Clear'}
                     </button>
