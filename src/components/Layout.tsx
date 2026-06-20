@@ -2,8 +2,10 @@ import React, { useState } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAppDispatch, useAppSelector } from '../store';
-import { logout } from '../store/authSlice';
+import { logout, type UserRole as AuthUserRole, rolePermissions } from '../store/authSlice';
 import { markNotificationRead } from '../store/notificationsSlice';
+import { useDevModuleStore, type DevRole } from '../store/devModuleStore';
+import { isModuleAllowed, type UserRole } from '../utils/permissionSystem';
 import logo from '../assets/logo.webp';
 import {
   LayoutDashboard,
@@ -23,8 +25,7 @@ import {
   Settings,
   LogOut,
   PanelLeft,
-  PanelLeftClose,
-  Activity
+  PanelLeftClose
 } from 'lucide-react';
 
 export const Layout: React.FC = () => {
@@ -65,16 +66,26 @@ export const Layout: React.FC = () => {
     navigate('/auth/login');
   };
 
+  const { currentRole, setRole } = useDevModuleStore();
+  const activeRole: UserRole = currentRole || (user?.role as UserRole) || 'Employee';
+
+  // Map sandbox roles to Redux equivalent roles for permission calculations
+  const mappedRole = activeRole === 'Team Manager' ? 'Team Leader' : 
+                     activeRole === 'Sales Employee' ? 'Employee' : 
+                     activeRole;
+
+  const activePermissions = (user && rolePermissions[mappedRole as AuthUserRole]) || [];
+
   // Navigation Items defined dynamically based on user permissions
   const navItems = [];
 
   // Dashboard - always visible
   navItems.push({ path: '/', label: t('dashboard'), icon: LayoutDashboard });
 
-  // CRM Module (requires VIEW_LEADS permission)
-  if (user?.permissions.includes('VIEW_LEADS') || user?.role === 'Client') {
+  // CRM Module
+  if (isModuleAllowed(activeRole, 'CRM') && (activePermissions.includes('VIEW_LEADS') || mappedRole === 'Client')) {
     const crmSubItems = [];
-    if (user?.role !== 'Client') {
+    if (mappedRole !== 'Client') {
       crmSubItems.push({ path: '/crm/leads', label: t('leads') });
       crmSubItems.push({ path: '/crm/pipeline', label: t('pipeline') });
       crmSubItems.push({ path: '/crm/communication', label: t('communication') });
@@ -90,16 +101,16 @@ export const Layout: React.FC = () => {
   }
 
   // Tasks Module
-  if (user?.role !== 'Client') {
+  if (isModuleAllowed(activeRole, 'Tasks') && mappedRole !== 'Client') {
     navItems.push({ path: '/tasks', label: t('tasks'), icon: CheckSquare });
   }
 
   // Employees Module
-  if (user?.role !== 'Client') {
+  if (isModuleAllowed(activeRole, 'Employees') && mappedRole !== 'Client') {
     const employeeSubItems = [];
     
     // Only HR, CEO, GM can see full employee list
-    if (user?.permissions.includes('VIEW_EMPLOYEES')) {
+    if (activePermissions.includes('VIEW_EMPLOYEES')) {
       employeeSubItems.push({ path: '/employees', label: t('employeeList') });
     }
     
@@ -114,9 +125,9 @@ export const Layout: React.FC = () => {
   }
 
   // KPI Module (requires VIEW_KPI permission)
-  if (user?.permissions.includes('VIEW_KPI')) {
+  if (isModuleAllowed(activeRole, 'KPI') && activePermissions.includes('VIEW_KPI')) {
     const kpiSub = [];
-    if (user?.permissions.includes('MANAGE_KPI')) {
+    if (activePermissions.includes('MANAGE_KPI')) {
       kpiSub.push({ path: '/kpi/templates', label: t('kpiBuilder') });
     }
     kpiSub.push({ path: '/kpi/evaluations', label: t('evaluationFlow') });
@@ -130,7 +141,7 @@ export const Layout: React.FC = () => {
   }
 
   // Finance Module (requires VIEW_FINANCE permission)
-  if (user?.permissions.includes('VIEW_FINANCE')) {
+  if (isModuleAllowed(activeRole, 'Finance') && activePermissions.includes('VIEW_FINANCE')) {
     const financeSub = [];
     financeSub.push({ path: '/finance/revenues', label: t('revenues') });
     financeSub.push({ path: '/finance/expenses', label: t('expenses') });
@@ -144,7 +155,7 @@ export const Layout: React.FC = () => {
   }
 
   // Marketing Module (requires VIEW_MARKETING permission)
-  if (user?.permissions.includes('VIEW_MARKETING')) {
+  if (isModuleAllowed(activeRole, 'Marketing') && activePermissions.includes('VIEW_MARKETING')) {
     navItems.push({
       label: t('marketing'),
       icon: Megaphone,
@@ -155,28 +166,52 @@ export const Layout: React.FC = () => {
     });
   }
 
-  // Files Module (always visible for doc storage)
-  navItems.push({ path: '/files', label: t('files'), icon: FolderOpen });
+  // Files Module
+  if (isModuleAllowed(activeRole, 'Files')) {
+    navItems.push({ path: '/files', label: t('files'), icon: FolderOpen });
+  }
 
-  // Reports (requires VIEW_REPORTS permission)
-  if (user?.permissions.includes('VIEW_REPORTS')) {
+  // Software Development Module
+  if (isModuleAllowed(activeRole, 'SoftwareDevelopment')) {
+    if (mappedRole !== 'Client') {
+      navItems.push({
+        label: 'تطوير البرمجيات / Dev Dept',
+        icon: Briefcase,
+        subItems: [
+          { path: '/dev/dashboard', label: 'لوحة التحكم / Dashboard' },
+          { path: '/dev/projects', label: 'المشاريع / Projects' },
+          { path: '/dev/tasks', label: 'المهام / Tasks' },
+          { path: '/dev/teams', label: 'الفرق / Teams' },
+          { path: '/dev/workload', label: 'ضغط العمل / Workload' },
+          { path: '/dev/bugs', label: 'الأخطاء والبلاغات / Bugs' },
+          { path: '/dev/change-requests', label: 'طلبات التعديل / Change Requests' },
+          { path: '/dev/reports', label: 'التقارير / Reports' },
+          { path: '/dev/developer-dashboard', label: 'لوحة المطور / Dev Dashboard' }
+        ]
+      });
+    } else {
+      // Client Portal
+      navItems.push({
+        label: 'بوابة العميل / Client Portal',
+        icon: Briefcase,
+        subItems: [
+          { path: '/dev/client-portal', label: 'متابعة المشروع / Project Progress' }
+        ]
+      });
+    }
+  }
+
+  // Reports
+  if (isModuleAllowed(activeRole, 'Reports') && activePermissions.includes('VIEW_REPORTS')) {
     navItems.push({ path: '/reports', label: t('reports'), icon: BarChart3 });
   }
 
-  // Automations (requires MANAGE_AUTOMATIONS permission) - Temporarily disabled
-  // if (user?.permissions.includes('MANAGE_AUTOMATIONS')) {
-  //   navItems.push({ path: '/automations', label: 'الأتمتة / Automations', icon: Cpu });
-  // }
-
   // Settings (requires MANAGE_SETTINGS permission)
-  if (user?.permissions.includes('MANAGE_SETTINGS')) {
+  if (isModuleAllowed(activeRole, 'Settings') && activePermissions.includes('MANAGE_SETTINGS')) {
     navItems.push({ path: '/settings', label: 'الإعدادات / Settings', icon: Settings });
   }
 
-  // Activity Logs - CEO only
-  if (user?.role === 'CEO') {
-    navItems.push({ path: '/ceo/activity-logs', label: 'سجل النشاط / Activity Logs', icon: Activity });
-  }
+
 
   const isActive = (path?: string, subItems?: { path: string }[]) => {
     if (path && location.pathname === path) return true;
@@ -219,6 +254,27 @@ export const Layout: React.FC = () => {
 
         {/* Action Controls */}
         <div className="flex items-center gap-2 sm:gap-4">
+          {/* Sandbox Role Switcher Dropdown */}
+          <div className="flex items-center gap-1.5 border border-yellow-200 bg-yellow-50/50 rounded-xl p-1 px-2.5 shadow-sm">
+            <span className="text-[10px] font-black text-yellow-800 uppercase hidden lg:inline">Sandbox:</span>
+            <select
+              value={activeRole}
+              onChange={(e) => {
+                const newRole = e.target.value as DevRole;
+                setRole(newRole);
+                navigate('/');
+              }}
+              className="bg-transparent text-xs font-bold text-yellow-900 border-none outline-none cursor-pointer focus:ring-0 focus:outline-none"
+            >
+              <option value="CEO">CEO</option>
+              <option value="Tech Lead">Tech Lead</option>
+              <option value="Team Manager">Team Manager</option>
+              <option value="Developer">Developer</option>
+              <option value="Sales Manager">Sales Manager</option>
+              <option value="Sales Employee">Sales Employee</option>
+            </select>
+          </div>
+
           {/* Language Toggle */}
           <button
             onClick={toggleLanguage}
@@ -236,7 +292,7 @@ export const Layout: React.FC = () => {
               <span className="text-[9px] text-gray-400 font-mono">{user?.email}</span>
             </div>
             <div className="px-3 py-1.5 rounded-xl border border-red-100 text-red-600 bg-red-50/50 text-xs font-black select-none">
-              <span>{user?.role}</span>
+              <span>{activeRole}</span>
             </div>
           </div>
 

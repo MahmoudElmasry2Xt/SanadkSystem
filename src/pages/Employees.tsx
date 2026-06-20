@@ -319,7 +319,7 @@ export const Employees: React.FC = () => {
 
     <input
       type="text"
-      placeholder={t('searchLeads')}
+      placeholder={t('searchEmployees')}
       value={searchTerm}
       onChange={(e) => setSearchTerm(e.target.value)}
       className="

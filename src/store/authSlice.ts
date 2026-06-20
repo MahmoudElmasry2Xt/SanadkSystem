@@ -89,15 +89,15 @@ export const rolePermissions: Record<UserRole, Permission[]> = {
 };
 
 const defaultUsers: Array<User & { password?: string }> = [
-  { id: 'u1', name: 'أحمد علي (CEO)', email: 'ceo@company.com', role: 'CEO', permissions: rolePermissions['CEO'], password: 'Password@123', status: 'Active' },
-  { id: 'u2', name: 'ياسر جلال (GM)', email: 'gm@company.com', role: 'General Manager', permissions: rolePermissions['General Manager'], password: 'Password@123', status: 'Active' },
-  { id: 'u3', name: 'سارة خالد (HR)', email: 'hr@company.com', role: 'HR Manager', permissions: rolePermissions['HR Manager'], password: 'Password@123', status: 'Active' },
-  { id: 'u4', name: 'ماجد سليمان (Finance)', email: 'finance@company.com', role: 'Finance Manager', permissions: rolePermissions['Finance Manager'], password: 'Password@123', status: 'Active' },
-  { id: 'u5', name: 'دينا الشافعي (Marketing)', email: 'marketing@company.com', role: 'Marketing Manager', permissions: rolePermissions['Marketing Manager'], password: 'Password@123', status: 'Active' },
-  { id: 'u6', name: 'محمود عبد السلام (Sales)', email: 'sales.manager@company.com', role: 'Sales Manager', permissions: rolePermissions['Sales Manager'], password: 'Password@123', status: 'Active' },
-  { id: 'u7', name: 'كريم نادر (Team Leader)', email: 'teamleader@company.com', role: 'Team Leader', permissions: rolePermissions['Team Leader'], password: 'Password@123', status: 'Active' },
-  { id: 'u8', name: 'محمد حسن (Employee)', email: 'employee@company.com', role: 'Employee', permissions: rolePermissions['Employee'], password: 'Password@123', status: 'Active' },
-  { id: 'u9', name: 'شركة النور (Client)', email: 'client@company.com', role: 'Client', permissions: rolePermissions['Client'], password: 'Password@123', status: 'Active' }
+  { id: 'u1', name: 'أحمد علي (CEO)', email: 'ceo@company.com', role: 'CEO', permissions: rolePermissions['CEO'], password: 'Password@123', status: 'Active', department: 'Management' },
+  { id: 'u2', name: 'ياسر جلال (GM)', email: 'gm@company.com', role: 'General Manager', permissions: rolePermissions['General Manager'], password: 'Password@123', status: 'Active', department: 'Management' },
+  { id: 'u3', name: 'سارة خالد (HR)', email: 'hr@company.com', role: 'HR Manager', permissions: rolePermissions['HR Manager'], password: 'Password@123', status: 'Active', department: 'HR' },
+  { id: 'u4', name: 'ماجد سليمان (Finance)', email: 'finance@company.com', role: 'Finance Manager', permissions: rolePermissions['Finance Manager'], password: 'Password@123', status: 'Active', department: 'Finance' },
+  { id: 'u5', name: 'دينا الشافعي (Marketing)', email: 'marketing@company.com', role: 'Marketing Manager', permissions: rolePermissions['Marketing Manager'], password: 'Password@123', status: 'Active', department: 'Marketing' },
+  { id: 'u6', name: 'محمود عبد السلام (Sales)', email: 'sales.manager@company.com', role: 'Sales Manager', permissions: rolePermissions['Sales Manager'], password: 'Password@123', status: 'Active', department: 'Sales' },
+  { id: 'u7', name: 'كريم نادر (Team Leader)', email: 'teamleader@company.com', role: 'Team Leader', permissions: rolePermissions['Team Leader'], password: 'Password@123', status: 'Active', department: 'Software Development' },
+  { id: 'u8', name: 'محمد حسن (Employee)', email: 'employee@company.com', role: 'Employee', permissions: rolePermissions['Employee'], password: 'Password@123', status: 'Active', department: 'Sales' },
+  { id: 'u9', name: 'شركة النور (Client)', email: 'client@company.com', role: 'Client', permissions: rolePermissions['Client'], password: 'Password@123', status: 'Active', department: 'Client' }
 ];
 
 const getStoredAuth = () => {

@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAppDispatch, useAppSelector } from '../../store';
-import { loginStart, loginSuccess, loginFailure, registerSuccess, rolePermissions } from '../../store/authSlice';
+import { loginStart, loginSuccess, loginFailure } from '../../store/authSlice';
 import logo from '../../assets/logo.webp';
 import { IconButton, Tooltip, Snackbar } from '@mui/material';
 import { Visibility, VisibilityOff, ContentCopy, CheckCircle } from '@mui/icons-material';
@@ -47,13 +47,7 @@ const customStyles = `
 const dict = {
   en: {
     title: "Login",
-    signup: "Sign Up",
     btnL: "LOGIN",
-    btnS: "SIGN UP",
-    toggleL: "Don't have an account?",
-    toggleS: "Already have an account?",
-    linkL: "Sign Up",
-    linkS: "Login",
     user: "Email Address",
     pass: "Password",
     rem: "Remember me",
@@ -61,21 +55,13 @@ const dict = {
   },
   ar: {
     title: "تسجيل الدخول",
-    signup: "إنشاء حساب",
     btnL: "دخول",
-    btnS: "تسجيل",
-    toggleL: "ليس لديك حساب؟",
-    toggleS: "لديك حساب بالفعل؟",
-    linkL: "سجل الآن",
-    linkS: "دخول",
     user: "البريد الإلكتروني",
     pass: "كلمة المرور",
     rem: "تذكرني",
     robot: "أنا لست روبوت"
   }
 };
-
-const generateUserId = () => `u-${Date.now()}`;
 
 export const Login: React.FC = () => {
   const { i18n } = useTranslation();
@@ -84,7 +70,6 @@ export const Login: React.FC = () => {
   const { loading, error, registeredUsers } = useAppSelector((state) => state.auth);
   const { addActivityLog } = useAppStore();
   
-  const [isLogin, setIsLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMsg, setSnackbarMsg] = useState('');
@@ -93,7 +78,6 @@ export const Login: React.FC = () => {
     register,
     handleSubmit,
     setValue,
-    reset,
     formState: { errors }
   } = useForm({
     defaultValues: {
@@ -107,93 +91,65 @@ export const Login: React.FC = () => {
   const lang = isRtl ? 'ar' : 'en';
 
   const onSubmit = (data: any) => {
-    if (isLogin) {
-      dispatch(loginStart());
-      
-      // Simulate API JWT auth delay
-      setTimeout(() => {
-        const match = registeredUsers.find(
-          (u) => u.email.toLowerCase() === data.email.toLowerCase() && u.password === data.password
+    dispatch(loginStart());
+
+    // Simulate API JWT auth delay
+    setTimeout(() => {
+      const match = registeredUsers.find(
+        (u) => u.email.toLowerCase() === data.email.toLowerCase() && u.password === data.password
+      );
+
+      if (match) {
+        if (match.status === 'Inactive' || match.status === 'Suspended') {
+          dispatch(loginFailure(isRtl ? 'حسابك معطل أو معلق. يرجى التواصل مع المسؤول.' : 'Your account is inactive or suspended. Please contact the administrator.'));
+          return;
+        }
+
+        dispatch(
+          loginSuccess({
+            user: {
+              id: match.id,
+              name: match.name,
+              email: match.email,
+              role: match.role,
+              permissions: match.permissions,
+              status: match.status,
+              department: match.department,
+              position: match.position
+            },
+            token: `mock-jwt-token-${match.role.toLowerCase().replace(/\s+/g, '-')}`
+          })
         );
 
-        if (match) {
-          if (match.status === 'Inactive' || match.status === 'Suspended') {
-            dispatch(loginFailure(isRtl ? 'حسابك معطل أو معلق. يرجى التواصل مع المسؤول.' : 'Your account is inactive or suspended. Please contact the administrator.'));
-            return;
-          }
+        addActivityLog(
+          'User Login',
+          match.name,
+          'user',
+          `${match.email} logged in successfully as ${match.role}`
+        );
 
-          dispatch(
-            loginSuccess({
-              user: {
-                id: match.id,
-                name: match.name,
-                email: match.email,
-                role: match.role,
-                permissions: match.permissions,
-                status: match.status,
-                department: match.department,
-                position: match.position
-              },
-              token: `mock-jwt-token-${match.role.toLowerCase().replace(/\s+/g, '-')}`
-            })
-          );
-
-          addActivityLog(
-            'User Login',
-            match.name,
-            'user',
-            `${match.email} logged in successfully as ${match.role}`
-          );
-
-          if (match.status === 'Pending First Login') {
-            navigate('/auth/force-change-password');
+        if (match.status === 'Pending First Login') {
+          navigate('/auth/force-change-password');
+        } else {
+          if (match.department === 'Software Development') {
+            navigate('/dev/dashboard');
+          } else if (match.department === 'Sales') {
+            navigate('/crm/dashboard');
+          } else if (match.role === 'CEO') {
+            navigate('/dashboard/ceo');
           } else {
             navigate('/');
           }
-        } else {
-          dispatch(loginFailure(isRtl ? 'البريد الإلكتروني أو كلمة المرور غير صحيحة' : 'Invalid email address or password'));
         }
-      }, 1000);
-    } else {
-      // Sign up mode
-      const exists = registeredUsers.find(
-        (u) => u.email.toLowerCase() === data.email.toLowerCase()
-      );
-      if (exists) {
-        setSnackbarMsg(isRtl ? 'هذا البريد الإلكتروني مسجل بالفعل!' : 'This email is already registered!');
-        setSnackbarOpen(true);
-        return;
+      } else {
+        dispatch(loginFailure(isRtl ? 'البريد الإلكتروني أو كلمة المرور غير صحيحة' : 'Invalid email address or password'));
       }
-
-      const newUser = {
-        id: generateUserId(),
-        name: data.email.split('@')[0] || 'New User',
-        email: data.email,
-        role: 'Employee' as const,
-        permissions: rolePermissions['Employee'] || [],
-        password: data.password,
-        status: 'Active' as const
-      };
-      dispatch(registerSuccess(newUser));
-      setSnackbarMsg(isRtl ? 'تم إنشاء الحساب بنجاح! يمكنك الآن تسجيل الدخول.' : 'Account created successfully! You can now log in.');
-      setSnackbarOpen(true);
-      setIsLogin(true);
-      reset({
-        email: data.email,
-        password: '',
-        rememberMe: false
-      });
-    }
+    }, 1000);
   };
 
   const toggleLang = () => {
     const nextLang = i18n.language === 'ar' ? 'en' : 'ar';
     i18n.changeLanguage(nextLang);
-  };
-
-  const toggleForm = (e: React.MouseEvent) => {
-    e.preventDefault();
-    setIsLogin(!isLogin);
   };
 
   const copyToClipboard = (text: string, label: string) => {
@@ -261,7 +217,7 @@ export const Login: React.FC = () => {
           <div className="bg-black/40 backdrop-blur-2xl p-8 rounded-[2.5rem] border border-white/10">
             <div className="text-center mb-6">
               <h2 className="text-3xl font-black text-white tracking-tighter">
-                {isLogin ? dict[lang].title : dict[lang].signup}
+                {dict[lang].title}
               </h2>
               <div className="w-12 h-1 bg-red-600 mx-auto rounded-full mt-3"></div>
             </div>
@@ -314,35 +270,31 @@ export const Login: React.FC = () => {
                 )}
               </div>
 
-              {isLogin && (
-                <div className="flex items-center justify-between text-sm py-1">
-                  <label className="flex items-center gap-2 text-white/60 cursor-pointer hover:text-white/80 transition-colors select-none">
-                    <input
-                      type="checkbox"
-                      {...register('rememberMe')}
-                      className="w-4 h-4 accent-red-600 rounded cursor-pointer"
-                    />
-                    <span>{dict[lang].rem}</span>
-                  </label>
-                  <Link
-                    to="/auth/forgot-password"
-                    className="text-red-400 hover:text-red-300 font-bold transition-colors"
-                  >
-                    {isRtl ? 'نسيت كلمة المرور؟' : 'Forgot Password?'}
-                  </Link>
-                </div>
-              )}
-
-              {isLogin && (
-                <div className="bg-white/5 border border-white/10 p-3 rounded-2xl flex items-center gap-3">
+              <div className="flex items-center justify-between text-sm py-1">
+                <label className="flex items-center gap-2 text-white/60 cursor-pointer hover:text-white/80 transition-colors select-none">
                   <input
                     type="checkbox"
-                    required
-                    className="w-5 h-5 accent-red-600 rounded cursor-pointer"
+                    {...register('rememberMe')}
+                    className="w-4 h-4 accent-red-600 rounded cursor-pointer"
                   />
-                  <span className="text-white text-sm font-bold">{dict[lang].robot}</span>
-                </div>
-              )}
+                  <span>{dict[lang].rem}</span>
+                </label>
+                <Link
+                  to="/auth/forgot-password"
+                  className="text-red-400 hover:text-red-300 font-bold transition-colors"
+                >
+                  {isRtl ? 'نسيت كلمة المرور؟' : 'Forgot Password?'}
+                </Link>
+              </div>
+
+              <div className="bg-white/5 border border-white/10 p-3 rounded-2xl flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  required
+                  className="w-5 h-5 accent-red-600 rounded cursor-pointer"
+                />
+                <span className="text-white text-sm font-bold">{dict[lang].robot}</span>
+              </div>
 
               <button
                 type="submit"
@@ -355,20 +307,9 @@ export const Login: React.FC = () => {
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
                 ) : (
-                  isLogin ? dict[lang].btnL : dict[lang].btnS
+                  dict[lang].btnL
                 )}
               </button>
-
-              <p className="text-center text-sm font-bold text-white/50 mt-3 select-none">
-                <span>{isLogin ? dict[lang].toggleL : dict[lang].toggleS} </span>
-                <a
-                  href="#"
-                  onClick={toggleForm}
-                  className="text-white font-bold underline hover:text-white/80 transition-colors"
-                >
-                  {isLogin ? dict[lang].linkL : dict[lang].linkS}
-                </a>
-              </p>
             </form>
           </div>
         </div>

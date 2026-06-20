@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAppSelector } from '../store';
+import { type UserRole } from '../store/authSlice';
 import { useAppStore } from '../store/useAppStore';
 import { useLocation, Navigate } from 'react-router-dom';
 import { useDashboardStats } from '../hooks/useDashboardStats';
+import { useDevModuleStore } from '../store/devModuleStore';
 import toast from 'react-hot-toast';
 import { KPICard } from '../components/KPICard';
 import {
@@ -187,7 +189,8 @@ export const Dashboard: React.FC = () => {
   const location = useLocation();
 
   const user = useAppSelector((state) => state.auth.user);
-  const currentRole = user?.role || 'Employee';
+  const { currentRole: storeRole } = useDevModuleStore();
+  const activeRole = storeRole || user?.role || 'Employee';
 
   // Role dashboard slugs
   const getRoleUrlSlug = (role: string | undefined): string => {
@@ -205,11 +208,6 @@ export const Dashboard: React.FC = () => {
     }
   };
 
-  // Root path '/' redirect logic
-  if (location.pathname === '/') {
-    return <Navigate to={`/dashboard/${getRoleUrlSlug(currentRole)}`} replace />;
-  }
-
   // State for Date Filter
   const [filter, setFilter] = useState<string>('This Month');
   const [customRange, setCustomRange] = useState<boolean>(false);
@@ -218,6 +216,29 @@ export const Dashboard: React.FC = () => {
 
   // Fetch Dashboard Stats via Hook
   const { data, loading, error, refetch } = useDashboardStats(filter);
+
+  // Root path '/' redirect logic
+  if (location.pathname === '/') {
+    if (activeRole === 'Tech Lead' || activeRole === 'Team Manager') {
+      return <Navigate to="/dev/dashboard" replace />;
+    }
+    if (activeRole === 'Developer') {
+      return <Navigate to="/dev/developer-dashboard" replace />;
+    }
+    if (activeRole === 'Client') {
+      return <Navigate to="/dev/client-portal" replace />;
+    }
+    const targetRole = activeRole === 'Sales Employee' ? 'Employee' : activeRole;
+    return <Navigate to={`/dashboard/${getRoleUrlSlug(targetRole)}`} replace />;
+  }
+
+  // Mapped role for standard dashboard layout logic & allowed metric IDs
+  const currentRole: UserRole = 
+    activeRole === 'Sales Employee' ? 'Employee' : 
+    activeRole === 'Team Manager' ? 'Team Leader' : 
+    activeRole === 'Tech Lead' ? 'Team Leader' : 
+    activeRole === 'Developer' ? 'Employee' : 
+    activeRole as UserRole;
 
   // Quick Action Handlers
   const handleActionClick = (actionName: string) => {

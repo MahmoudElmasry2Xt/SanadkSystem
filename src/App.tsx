@@ -26,7 +26,7 @@ import { Files } from './pages/Files';
 import { Notifications } from './pages/Notifications';
 import { Reports } from './pages/Reports';
 import { Settings } from './pages/Settings';
-import { SystemActivityLogs } from './pages/SystemActivityLogs';
+
 // import { Automations } from './pages/Automations';
 
 // Auth Pages
@@ -34,6 +34,20 @@ import { Login } from './pages/auth/Login';
 import { ForgotPassword } from './pages/auth/ForgotPassword';
 import { ResetPassword } from './pages/auth/ResetPassword';
 import { ForceChangePassword } from './pages/auth/ForceChangePassword';
+
+// Dev Module Pages
+import { DevDashboard } from './pages/dev/DevDashboard';
+import { DevProjects } from './pages/dev/DevProjects';
+import { DevProjectDetails } from './pages/dev/DevProjectDetails';
+import { DevTasks } from './pages/dev/DevTasks';
+import { DevTaskDetails } from './pages/dev/DevTaskDetails';
+import { DevWorkload } from './pages/dev/DevWorkload';
+import { DevTeams } from './pages/dev/DevTeams';
+import { DevBugs } from './pages/dev/DevBugs';
+import { DevChangeRequests } from './pages/dev/DevChangeRequests';
+import { DevReports } from './pages/dev/DevReports';
+import { DevDeveloperDashboard } from './pages/dev/DevDeveloperDashboard';
+import { DevClientPortal } from './pages/dev/DevClientPortal';
 
 const router = createBrowserRouter([
   {
@@ -132,6 +146,14 @@ const router = createBrowserRouter([
         path: '/dashboard/client',
         element: (
           <ProtectedRoute requiredRole="Client">
+            <Dashboard />
+          </ProtectedRoute>
+        )
+      },
+      {
+        path: '/crm/dashboard',
+        element: (
+          <ProtectedRoute requiredPermission="VIEW_LEADS">
             <Dashboard />
           </ProtectedRoute>
         )
@@ -284,11 +306,101 @@ const router = createBrowserRouter([
           </ProtectedRoute>
         )
       },
+
+      // Dev Module Routes
       {
-        path: '/ceo/activity-logs',
+        path: '/dev/dashboard',
         element: (
-          <ProtectedRoute requiredRole="CEO">
-            <SystemActivityLogs />
+          <ProtectedRoute>
+            <DevDashboard />
+          </ProtectedRoute>
+        )
+      },
+      {
+        path: '/dev/projects',
+        element: (
+          <ProtectedRoute>
+            <DevProjects />
+          </ProtectedRoute>
+        )
+      },
+      {
+        path: '/dev/projects/:id',
+        element: (
+          <ProtectedRoute>
+            <DevProjectDetails />
+          </ProtectedRoute>
+        )
+      },
+      {
+        path: '/dev/tasks',
+        element: (
+          <ProtectedRoute>
+            <DevTasks />
+          </ProtectedRoute>
+        )
+      },
+      {
+        path: '/dev/tasks/:id',
+        element: (
+          <ProtectedRoute>
+            <DevTaskDetails />
+          </ProtectedRoute>
+        )
+      },
+      {
+        path: '/dev/workload',
+        element: (
+          <ProtectedRoute>
+            <DevWorkload />
+          </ProtectedRoute>
+        )
+      },
+      {
+        path: '/dev/teams',
+        element: (
+          <ProtectedRoute>
+            <DevTeams />
+          </ProtectedRoute>
+        )
+      },
+      {
+        path: '/dev/bugs',
+        element: (
+          <ProtectedRoute>
+            <DevBugs />
+          </ProtectedRoute>
+        )
+      },
+      {
+        path: '/dev/change-requests',
+        element: (
+          <ProtectedRoute>
+            <DevChangeRequests />
+          </ProtectedRoute>
+        )
+      },
+      {
+        path: '/dev/reports',
+        element: (
+          <ProtectedRoute>
+            <DevReports />
+          </ProtectedRoute>
+        )
+      },
+      {
+        path: '/dev/developer-dashboard',
+        element: (
+          <ProtectedRoute>
+            <DevDeveloperDashboard />
+          </ProtectedRoute>
+        )
+      },
+      {
+        path: '/dev/client-portal',
+        element: (
+          <ProtectedRoute>
+            <DevClientPortal />
           </ProtectedRoute>
         )
       },

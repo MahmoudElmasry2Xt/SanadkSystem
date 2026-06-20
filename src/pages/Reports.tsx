@@ -52,18 +52,14 @@ export const Reports: React.FC = () => {
 
   // Upload Report Form State
   const [uploadOpen, setUploadOpen] = useState(false);
-  const [uploaderName, setUploaderName] = useState('');
-  const [department, setDepartment] = useState('المبيعات');
+  const [uploaderName, setUploaderName] = useState(user?.name || '');
+  const [department, setDepartment] = useState(user?.department || (isRtl ? 'المبيعات' : 'Sales'));
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [serverTime, setServerTime] = useState<string>('');
 
   // Keep a live clock in upload modal showing server time
   useEffect(() => {
     if (uploadOpen) {
-      if (user) {
-        setUploaderName(user.name);
-        setDepartment(user.department || (isRtl ? 'المبيعات' : 'Sales'));
-      }
       const updateTime = () => {
         const now = new Date();
         const timeStr = now.toISOString().replace('T', ' ').substring(0, 19);
@@ -73,7 +69,7 @@ export const Reports: React.FC = () => {
       const interval = setInterval(updateTime, 1000);
       return () => clearInterval(interval);
     }
-  }, [uploadOpen, user, isRtl]);
+  }, [uploadOpen]);
 
   const handleExport = () => {
     toast.success(isRtl ? 'تم تصدير التقرير بنجاح بصيغة PDF / Excel!' : 'Report exported successfully to PDF / Excel!');
@@ -160,7 +156,13 @@ export const Reports: React.FC = () => {
 
         <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
           <button
-            onClick={() => setUploadOpen(true)}
+            onClick={() => {
+              if (user) {
+                setUploaderName(user.name);
+                setDepartment(user.department || (isRtl ? 'المبيعات' : 'Sales'));
+              }
+              setUploadOpen(true);
+            }}
             className="w-full sm:w-auto custom-btn-secondary py-2.5 text-xs flex items-center justify-center gap-1.5"
           >
             <Upload className="w-4 h-4" />
